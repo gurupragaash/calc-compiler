@@ -57,6 +57,7 @@ bool debug = false;
 int  gOffset = 0;
 bool use_select = false;
 
+<<<<<<< ef1e94be58d02a5bab3d4d3b3206f78a6e04f929
 
 
 <<<<<<< 3df167b8eb9fffcdcfaf8ab8e33a1aeaa94c31e2
@@ -64,6 +65,8 @@ Value* parseExpression();
 void skipSpaces();
 >>>>>>> parsing done
 =======
+=======
+>>>>>>> fixed the code to read input from file
 Value* parseExpression(string tab);
 void skipSpaces(string tab);
 >>>>>>> fixed the code to read input from file
@@ -1076,6 +1079,7 @@ Value* parser(string tab) {
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
     printf("Parsed successfully\r\n");
   }
+<<<<<<< ef1e94be58d02a5bab3d4d3b3206f78a6e04f929
 <<<<<<< e3a85e8828d8e4f737053287d07d64811bf70813
 <<<<<<< 3df167b8eb9fffcdcfaf8ab8e33a1aeaa94c31e2
 <<<<<<< d77025b4cd63efe9d68522c1c85219a17ecc7564
@@ -1086,6 +1090,9 @@ Value* parser(string tab) {
 >>>>>>> fixed the code to read input from file
 =======
 >>>>>>> Done. Add comments and make it neat
+=======
+  printf("Parsed successfully\r\n");
+>>>>>>> fixed the code to read input from file
   return result;
 >>>>>>> Change to add LLVM code
 }
