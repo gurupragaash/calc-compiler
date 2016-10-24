@@ -818,6 +818,7 @@ static int compile() {
   BasicBlock *BB = BasicBlock::Create(C, "entry", F);
   Builder.SetInsertPoint(BB);
 
+<<<<<<< 007b32a346b51a1ed2d3aca298a9aa441cd05678
   gArgValues.clear();
   int argCount = 0;
   for (auto &Arg : F->args()) { 
@@ -825,6 +826,13 @@ static int compile() {
   }
 
   Value *RetVal = parser("");
+=======
+  // TODO: parse the source program
+  // TODO: generate correct LLVM instead of just an empty function
+  Value *RetVal = parser();
+
+  //Value *RetVal = ConstantInt::get(C, APInt(64, 0));
+>>>>>>> Adding the parsing code
   Builder.CreateRet(RetVal);
   assert(!verifyModule(*M, &outs()));
   M->dump();
@@ -839,8 +847,7 @@ int main(int argc, char **argv) {
   return compile(); 
 =======
   if (openFile(argc, argv) == true) {
-    parser();
-    //return compile(); 
+    return compile(); 
   } 
   return -1;
 >>>>>>> parsing done
