@@ -25,8 +25,6 @@ int  gLineNo = 1;
 bool debug = false;
 int  gOffset = 0;
 
-
-
 Value* parseExpression(string tab);
 void skipSpaces(string tab);
 
@@ -437,6 +435,7 @@ Value* parser(string tab) {
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
     printf("Parsed successfully\r\n");
   }
+  printf("Parsed successfully\r\n");
   return result;
 }
 
