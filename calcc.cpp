@@ -93,6 +93,7 @@ bool use_select = false;
 >>>>>>> Done with coding
 =======
 
+<<<<<<< d30e234ea8e21fa2b312da24f45132f5c8a9c56b
 
 >>>>>>> Done. Add comments and make it neat
 
@@ -107,6 +108,8 @@ void skipSpaces();
 >>>>>>> fixed the code to read input from file
 =======
 >>>>>>> Done. Add comments and make it neat
+=======
+>>>>>>> fixed the code to read input from file
 Value* parseExpression(string tab);
 void skipSpaces(string tab);
 >>>>>>> fixed the code to read input from file
@@ -2115,6 +2118,7 @@ Value* parser(string tab) {
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
     printf("Parsed successfully\r\n");
   }
+<<<<<<< d30e234ea8e21fa2b312da24f45132f5c8a9c56b
 <<<<<<< 87854e54e3a4851736023e27df7daf2cca00502c
 <<<<<<< 63e83c850d17b5031a59602e1846f84fa81dbbd6
 <<<<<<< 34181eae74af2141376e3589e6bbfe14983331d3
@@ -2125,6 +2129,9 @@ Value* parser(string tab) {
 >>>>>>> fixed the code to read input from file
 =======
 >>>>>>> Done. Add comments and make it neat
+=======
+  printf("Parsed successfully\r\n");
+>>>>>>> fixed the code to read input from file
   return result;
 >>>>>>> Change to add LLVM code
 }
