@@ -2759,6 +2759,7 @@ static int compile() {
 =======
   // TODO: parse the source program
   // TODO: generate correct LLVM instead of just an empty function
+<<<<<<< 7dca856c26212d3091190b19c23abd69814b8407
 <<<<<<< 63e83c850d17b5031a59602e1846f84fa81dbbd6
 <<<<<<< 84e846ae7e43a1ba1a5fbb9498c8e02eb7657f7d
   Value *RetVal = parser("");
@@ -2788,6 +2789,11 @@ static int compile() {
 
   Value *RetVal = parser("");
 >>>>>>> Done. Add comments and make it neat
+=======
+  Value *RetVal = parser();
+
+  //Value *RetVal = ConstantInt::get(C, APInt(64, 0));
+>>>>>>> Adding the parsing code
   Builder.CreateRet(RetVal);
   M->dump();
   assert(!verifyModule(*M, &outs()));
@@ -2845,8 +2851,7 @@ int main(int argc, char **argv) {
 >>>>>>> Done. Add comments and make it neat
 =======
   if (openFile(argc, argv) == true) {
-    parser();
-    //return compile(); 
+    return compile(); 
   } 
   return -1;
 >>>>>>> parsing done
