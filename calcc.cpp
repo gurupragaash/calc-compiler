@@ -138,12 +138,16 @@ void skipSpaces();
 char gCurValue = -1;
 int  gArgsLen = 6;
 int  gLineNo = 1;
-enum oper {ADD = 0, SUB, MUL, DIV, MOD};
-bool debug = true;
+bool debug = false;
 
+<<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
 Value* parseExpression();
 void skipSpaces();
 >>>>>>> parsing done
+=======
+Value* parseExpression(string tab);
+void skipSpaces(string tab);
+>>>>>>> fixed the code to read input from file
 
 void usage(void) {
   printf("executable <input file.calc>\r\n");
@@ -354,7 +358,7 @@ void printError(int lineno) {
   printf ("%d:Invalid statement at LineNo:%d:%d - %c%s",
            lineno,
            gLineNo, (int)gInFile.tellg(), getChar(), getContext().c_str());
-  exit(0);
+  exit(1);
 }
 
 void printError(int lineno, const char *c) {
@@ -362,26 +366,26 @@ void printError(int lineno, const char *c) {
       lineno,
       c, gLineNo, (int)gInFile.tellg());
   printf("Remaining Code: %c%s", getChar(), getContext().c_str());
-  exit(0);
+  exit(1);
 }
 
-void parseComment() {
+void parseComment(string tab) {
   if (debug) {
-    printf("Enter %s\r\n", __PRETTY_FUNCTION__);
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
   while (getnextChar() != '\n');
   //Skip \n
   getnextChar();
   gLineNo++;
   if (debug) {
-    printf("Exit %s\r\n", __PRETTY_FUNCTION__);
+    printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
 }
 
-Value* parseArgs() {
+Value* parseArgs(string tab) {
   char errmsg[50];
   if (debug) {
-    printf("Enter %s\r\n", __PRETTY_FUNCTION__);
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
   int i;
 <<<<<<< bad2c0b86a45e129b59dcee93d9bc1ddd9de3d86
@@ -392,6 +396,7 @@ Value* parseArgs() {
   getnextChar();
   for (i = 0; i < gArgsLen; i++) {
     if (accept('0' + (i - 0))) { //Change from int to char
+<<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
 <<<<<<< 6ea1a0ed6ddb2d8e9d63381a9ed8d84c4ccb4d06
 <<<<<<< bad2c0b86a45e129b59dcee93d9bc1ddd9de3d86
 <<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
@@ -406,6 +411,12 @@ Value* parseArgs() {
 =======
 >>>>>>> parsing done
       break;
+=======
+      if (debug) {
+        printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+      }
+      return ConstantInt::get(Type::getInt64Ty(C), i);
+>>>>>>> fixed the code to read input from file
     }  
   }
   if (i == gArgsLen) {
@@ -492,11 +503,16 @@ Value* parseArithmeticOperation(char oper, string tab) {
   return result;
 }
 
+<<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
 Value* parseNegativeNumber(string tab) {
+=======
+Value* parseNumber(bool isNegative, string tab) {
+>>>>>>> fixed the code to read input from file
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
 
+<<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
   long num = 0, oldNum = 0;
   char ch = getChar();
 
@@ -523,6 +539,11 @@ Value* parsePositiveNumber(string tab) {
   long num = 0, oldNum = 0;
   char ch = getChar();
 
+=======
+  int num = 0, count = 0;
+  char ch = getChar();
+
+>>>>>>> fixed the code to read input from file
   while  ((ch >= '0') && (ch <= '9')) {
     num = (num * 10) + (0 + (ch - '0'));
     ch = getnextChar();
@@ -618,14 +639,20 @@ Value* parseBoolExpression(string tab) {
   return result;
 }
 
+<<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
 Value* parseWhile(string tab) {
   Value *whileValue, *result = NULL;
 
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
+=======
+Value* parseIf(string tab) {
+  Value *result = NULL;
+>>>>>>> fixed the code to read input from file
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
 
+<<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
   if (accept('w') && accept('h') && accept('i') && accept('l') && accept('e')) {
 
     BasicBlock *CurrentBB = Builder.GetInsertBlock();
@@ -647,6 +674,12 @@ Value* parseWhile(string tab) {
     Builder.CreateBr(WhileEntryBB);
     Builder.SetInsertPoint(WhileExitBB);
     result = PN;
+=======
+  if (accept('i') && accept('f')) {
+    result = Builder.CreateSelect(parseBoolExpression(tab+"\t"),
+                                  parseExpression(tab+"\t"),
+                                  parseExpression(tab+"\t"));
+>>>>>>> fixed the code to read input from file
   } else {
     printError(__LINE__);
   }
@@ -658,6 +691,7 @@ Value* parseWhile(string tab) {
   return result;
 }
 
+<<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
 Value* parseIf(string tab) {
   Value *result = NULL, *thenValue = NULL, *elseValue = NULL;
   //Function *TheFunction = Builder.GetInsertBlock()->getParent();
@@ -667,6 +701,11 @@ Value* parseIf(string tab) {
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+=======
+void skipSpaces(string tab) {
+  if (debug) {
+    //printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+>>>>>>> fixed the code to read input from file
   }
 
   if (accept('i') && accept('f')) {
@@ -712,11 +751,16 @@ Value* parseIf(string tab) {
   }
 
   if (debug) {
+<<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+=======
+    //printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+>>>>>>> fixed the code to read input from file
   }
   return result;
 }
 
+<<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
 void skipSpaces(string tab) {
   if (debug) {
     //printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
@@ -749,6 +793,16 @@ void skipSpaces(string tab) {
   return NULL;
 >>>>>>> Change to add LLVM code
 }
+=======
+Value* parseExpression(string tab) {
+  char errmsg[75];
+  Value *result;
+  if (debug) {
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+
+  skipSpaces(tab+"\t");
+>>>>>>> fixed the code to read input from file
 
 //Guess this should return an LLVM object
 Value* parseArithmeticOperation(char oper) {
@@ -757,6 +811,7 @@ Value* parseArithmeticOperation(char oper) {
     printf("Enter %s\r\n", __PRETTY_FUNCTION__);
   }
 
+<<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
   switch (oper) {
   case '+':
     result = Builder.CreateAdd(parseExpression(), 
@@ -2643,61 +2698,71 @@ Value* parseExpression() {
       parseComment();
     } else if (ch == 'a') {
       result = parseArgs();
+=======
+  while (ch != EOF){
+    if (ch == '#') {
+      parseComment(tab+"\t");
+    } else if (ch == 'a') {
+      result = parseArgs(tab+"\t");
+>>>>>>> fixed the code to read input from file
       break;
     } else if (ch == '\n') {
       //Increment the line number, so that we can give a 
       //meaningful error message
       gLineNo++;
+      ch = getnextChar(); 
     } else if (ch == ' ') {
       //Ignore White space
-    } else if ((ch == '+') || (ch == '-') || (ch == '*') || 
+      ch = getnextChar(); 
+    } else if ((ch == '+') || (ch == '*') || 
                (ch == '/') || (ch == '%')) {
+      //Negative case is special, handled below
       getnextChar();
-      result = parseArithmeticOperation(ch); 
+      result = parseArithmeticOperation(ch, tab+"\t"); 
       break;
     } else if (ch == '-') {
-      result = parseNumber();
+      if (getnextChar() == ' ') {
+        result = parseArithmeticOperation(ch, tab+"\t"); 
+      } else {
+        result = parseNumber(true/*isNegative*/, tab+"\t");
+      }
       break;
     } else if ((ch >= '0') && (ch <= '9')) {
-      result = parseNumber();
+      result = parseNumber(false/*isNegative*/, tab+"\t");
       break;
     } else if (ch == '(') {
       getnextChar();
-      result = parseExpression();
+      result = parseExpression(tab+"\t");
       if (accept(')') == false) {
         printError(__LINE__, "Missing Matching paranthesis");
       }
       break;
     } else if (ch == 'i') {
-      result = parseIf();
-      break;
-    } else if (ch == ')') {
-      getnextChar();
+      result = parseIf(tab+"\t");
       break;
     } else {
       printError(__LINE__);
     }
-    ch = getChar();
-  }while (ch != EOF);
+  }
 
   if (debug) {
-    printf("Exit %s\r\n", __PRETTY_FUNCTION__);
+    printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
   return result;
 }
 
-Value* parser() {
+Value* parser(string tab) {
   Value *result = NULL;
   if (debug) {
-    printf("Enter %s\r\n", __PRETTY_FUNCTION__);
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
   char ch = getnextChar();
   while(ch != EOF) {
     if (ch == '#') {
-      parseComment();
+      parseComment(tab+"\t");
     } else {
-      result = parseExpression();
-      skipSpaces();
+      result = parseExpression(tab+"\t");
+      skipSpaces(tab+"\t");
       if (getChar() == EOF) {
         break;
       } else {
@@ -2706,13 +2771,16 @@ Value* parser() {
     }
     ch = getChar();
   }
-  printf("Parsed successfully\r\n");
   if (debug) {
-    printf("Exit %s\r\n", __PRETTY_FUNCTION__);
+    printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
+<<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
 <<<<<<< 6ea1a0ed6ddb2d8e9d63381a9ed8d84c4ccb4d06
 >>>>>>> parsing done
 =======
+=======
+  printf("Parsed successfully\r\n");
+>>>>>>> fixed the code to read input from file
   return result;
 >>>>>>> Change to add LLVM code
 }
@@ -2759,6 +2827,7 @@ static int compile() {
 =======
   // TODO: parse the source program
   // TODO: generate correct LLVM instead of just an empty function
+<<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
 <<<<<<< 7dca856c26212d3091190b19c23abd69814b8407
 <<<<<<< 63e83c850d17b5031a59602e1846f84fa81dbbd6
 <<<<<<< 84e846ae7e43a1ba1a5fbb9498c8e02eb7657f7d
@@ -2791,6 +2860,9 @@ static int compile() {
 >>>>>>> Done. Add comments and make it neat
 =======
   Value *RetVal = parser();
+=======
+  Value *RetVal = parser("");
+>>>>>>> fixed the code to read input from file
 
   //Value *RetVal = ConstantInt::get(C, APInt(64, 0));
 >>>>>>> Adding the parsing code
@@ -2853,6 +2925,10 @@ int main(int argc, char **argv) {
   if (openFile(argc, argv) == true) {
     return compile(); 
   } 
+<<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
   return -1;
 >>>>>>> parsing done
+=======
+  return 1;
+>>>>>>> fixed the code to read input from file
 }
