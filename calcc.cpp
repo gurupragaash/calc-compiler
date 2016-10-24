@@ -141,7 +141,7 @@ int  gLineNo = 1;
 enum oper {ADD = 0, SUB, MUL, DIV, MOD};
 bool debug = true;
 
-void parseExpression();
+Value* parseExpression();
 void skipSpaces();
 >>>>>>> parsing done
 
@@ -378,7 +378,7 @@ void parseComment() {
   }
 }
 
-void parseArgs() {
+Value* parseArgs() {
   char errmsg[50];
   if (debug) {
     printf("Enter %s\r\n", __PRETTY_FUNCTION__);
@@ -392,6 +392,7 @@ void parseArgs() {
   getnextChar();
   for (i = 0; i < gArgsLen; i++) {
     if (accept('0' + (i - 0))) { //Change from int to char
+<<<<<<< 6ea1a0ed6ddb2d8e9d63381a9ed8d84c4ccb4d06
 <<<<<<< bad2c0b86a45e129b59dcee93d9bc1ddd9de3d86
 <<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
 <<<<<<< e3a85e8828d8e4f737053287d07d64811bf70813
@@ -735,67 +736,126 @@ void skipSpaces(string tab) {
   if (debug) {
     printf("Exit %s\r\n", __PRETTY_FUNCTION__);
   }
+=======
+      if (debug) {
+        printf("Exit %s\r\n", __PRETTY_FUNCTION__);
+      }
+      return ConstantInt::get(Type::getInt64Ty(C), i);
+    }  
+  }
+  sprintf(errmsg, "Invalid argument (a%c) used in the program", 
+          getChar());
+  printError(__LINE__, errmsg);
+  return NULL;
+>>>>>>> Change to add LLVM code
 }
 
 //Guess this should return an LLVM object
-void parseArithmeticOperation(char oper) {
+Value* parseArithmeticOperation(char oper) {
+  Value* result = NULL;
   if (debug) {
     printf("Enter %s\r\n", __PRETTY_FUNCTION__);
   }
-  parseExpression();
-  parseExpression();
-  //Get Oper1
-  //Oper1 = parseExpression();
-  //Oper2 = parseExpression();
+
+  switch (oper) {
+  case '+':
+    result = Builder.CreateAdd(parseExpression(), 
+						  								 parseExpression(), "addtmp");
+  case '-':
+    result = Builder.CreateSub(parseExpression(), 
+						  								 parseExpression(), "subtmp");
+  case '*':
+    result = Builder.CreateMul(parseExpression(), 
+						  								 parseExpression(), "multmp");
+  case '/':
+    result = Builder.CreateSDiv(parseExpression(), 
+						  							    parseExpression(), "divtmp");
+  case '%':
+    result = Builder.CreateSRem(parseExpression(), 
+					  								 	  parseExpression(), "modtmp");
+  default:
+    printError(__LINE__, "Fatal error in compiler. Cannot reach here");
+  }
+
   if (debug) {
     printf("Exit %s\r\n", __PRETTY_FUNCTION__);
   }
+  return result;
 }
 
-void parseNumber() {
+Value* parseNumber() {
   if (debug) {
     printf("Enter %s\r\n", __PRETTY_FUNCTION__);
   }
+
   int num = 0, count = 0;
+  bool isNegative = false;
   char ch = getChar();
+
+  if (ch == '-') {
+    isNegative = true;
+    ch = getnextChar();
+  }
   while  ((ch >= '0') && (ch <= '9')) {
     num = (num * 10 * count++) + (0 + (ch - '0'));
     ch = getnextChar();
   }
-  //changed the int to number;
+  if (isNegative) {
+    num = num * (-1);
+  }
+
   if (debug) {
     printf("Exit %s\r\n", __PRETTY_FUNCTION__);
   }
+  return ConstantInt::get(C, APInt(64, num));
 }
 
-void parseRelationalOperation() {
+Value* parseRelationalOperation() {
+  Value* result = NULL;
   if (debug) {
     printf("Enter %s\r\n", __PRETTY_FUNCTION__);
   }
 
   if (accept('>')) {
-    //This is greater than
     if (accept('=')) {
       //This is greater than equals 
+      result = Builder.CreateICmpSGE(parseExpression(),
+                                     parseExpression(), "gethan");
+    } else {
+      //This is greater than
+      result = Builder.CreateICmpSGT(parseExpression(),
+                                     parseExpression(), "gthan");
     }
   } else if (accept('<')) {
-    //This is less than
     if (accept('=')) {
       //This is less than equals 
+      result = Builder.CreateICmpSLE(parseExpression(),
+                                     parseExpression(), "lethan");
+    } else {
+      //This is less than
+      result = Builder.CreateICmpSLT(parseExpression(),
+                                     parseExpression(), "lthan");
     }
   } else if (accept('!') && accept('=')) {
     //This is not equal to
+    result = Builder.CreateICmpNE(parseExpression(),
+                                  parseExpression(), "ne");
   } else if (accept('=') && accept('=')) {
     //This is double equals 
+    result = Builder.CreateICmpEQ(parseExpression(),
+                                  parseExpression(), "eq");
+  } else {
+    printError(__LINE__, "Invalid Relational Operator used");
   }
-  parseExpression();
-  parseExpression();
+
   if (debug) {
     printf("Exit %s\r\n", __PRETTY_FUNCTION__);
   }
+  return result;
 }
 
-void parseBoolExpression() {
+Value* parseBoolExpression() {
+  Value* result = NULL;
   if (debug) {
     printf("Enter %s\r\n", __PRETTY_FUNCTION__);
   }
@@ -806,15 +866,17 @@ void parseBoolExpression() {
 
   if (accept('t') && accept('r') && accept('u') && accept('e')) {
     //Its a true condition
+    result = ConstantInt::get(C, APInt(64, 1));
   } else if (accept('f') && accept('a') && accept('l') 
       && accept('s') && accept('e')) {
     //Its a false condition
+    result = ConstantInt::get(C, APInt(64, 0));
   } else if ((ch == '>') || (ch == '<') || (ch == '=') || 
              (ch == '!')) {
-    parseRelationalOperation(); 
+    result = parseRelationalOperation(); 
   } else if (ch == ('(')) {
     getnextChar();
-    parseBoolExpression();
+    result = parseBoolExpression();
     if (accept(')') == false) {
       printError(__LINE__, "Missing ) Paranthesis in boolean exp");
     }
@@ -825,17 +887,19 @@ void parseBoolExpression() {
   if (debug) {
     printf("Exit %s\r\n", __PRETTY_FUNCTION__);
   }
+  return result;
 }
 
-void parseIf() {
+Value* parseIf() {
+  Value *result = NULL;
   if (debug) {
     printf("Enter %s\r\n", __PRETTY_FUNCTION__);
   }
+
   if (accept('i') && accept('f')) {
-    //Move till you find the ( of the bool expression
-      parseBoolExpression();
-      parseExpression();
-      parseExpression();
+    result = Builder.CreateSelect(parseBoolExpression(),
+                                  parseExpression(),
+                                  parseExpression());
   } else {
 <<<<<<< b73225f6a502c9c434b06985bcd1b41a1e061349
     printError();
@@ -844,9 +908,11 @@ void parseIf() {
     printError(__LINE__);
 >>>>>>> parser mostly working
   }
+
   if (debug) {
     printf("Exit %s\r\n", __PRETTY_FUNCTION__);
   }
+<<<<<<< 6ea1a0ed6ddb2d8e9d63381a9ed8d84c4ccb4d06
 <<<<<<< bad2c0b86a45e129b59dcee93d9bc1ddd9de3d86
 =======
       if (debug) {
@@ -854,6 +920,14 @@ void parseIf() {
       }
       return ConstantInt::get(Type::getInt64Ty(C), i);
     }  
+=======
+  return result;
+}
+
+void skipSpaces() {
+  if (debug) {
+    printf("Enter %s\r\n", __PRETTY_FUNCTION__);
+>>>>>>> Change to add LLVM code
   }
   sprintf(errmsg, "Invalid argument (a%c) used in the program", 
           getChar());
@@ -2553,10 +2627,9 @@ void skipSpaces() {
   }
 }
 
-/* This function is called with the current pointer
- * at ( */
-void parseExpression() {
+Value* parseExpression() {
   char errmsg[75];
+  Value *result;
   if (debug) {
     printf("Enter %s\r\n", __PRETTY_FUNCTION__);
   }
@@ -2569,7 +2642,7 @@ void parseExpression() {
     if (ch == '#') {
       parseComment();
     } else if (ch == 'a') {
-      parseArgs();
+      result = parseArgs();
       break;
     } else if (ch == '\n') {
       //Increment the line number, so that we can give a 
@@ -2580,20 +2653,23 @@ void parseExpression() {
     } else if ((ch == '+') || (ch == '-') || (ch == '*') || 
                (ch == '/') || (ch == '%')) {
       getnextChar();
-      parseArithmeticOperation(ch); 
+      result = parseArithmeticOperation(ch); 
+      break;
+    } else if (ch == '-') {
+      result = parseNumber();
       break;
     } else if ((ch >= '0') && (ch <= '9')) {
-      parseNumber();
+      result = parseNumber();
       break;
     } else if (ch == '(') {
       getnextChar();
-      parseExpression();
+      result = parseExpression();
       if (accept(')') == false) {
         printError(__LINE__, "Missing Matching paranthesis");
       }
       break;
     } else if (ch == 'i') {
-      parseIf();
+      result = parseIf();
       break;
     } else if (ch == ')') {
       getnextChar();
@@ -2603,12 +2679,15 @@ void parseExpression() {
     }
     ch = getChar();
   }while (ch != EOF);
+
   if (debug) {
     printf("Exit %s\r\n", __PRETTY_FUNCTION__);
   }
+  return result;
 }
 
-void parser() {
+Value* parser() {
+  Value *result = NULL;
   if (debug) {
     printf("Enter %s\r\n", __PRETTY_FUNCTION__);
   }
@@ -2617,7 +2696,7 @@ void parser() {
     if (ch == '#') {
       parseComment();
     } else {
-      parseExpression();
+      result = parseExpression();
       skipSpaces();
       if (getChar() == EOF) {
         break;
@@ -2631,7 +2710,11 @@ void parser() {
   if (debug) {
     printf("Exit %s\r\n", __PRETTY_FUNCTION__);
   }
+<<<<<<< 6ea1a0ed6ddb2d8e9d63381a9ed8d84c4ccb4d06
 >>>>>>> parsing done
+=======
+  return result;
+>>>>>>> Change to add LLVM code
 }
 
 static int compile() {
