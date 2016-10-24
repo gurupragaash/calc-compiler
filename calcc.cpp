@@ -79,16 +79,18 @@ string getContext() {
   return context;
 }
 
-void printError() {
-  printf ("Invalid statement at LineNo:%d:%d - %s",
-           gLineNo, (int)gInFile.tellg(), getContext().c_str());
+void printError(int lineno) {
+  printf ("%d:Invalid statement at LineNo:%d:%d - %c%s",
+           lineno,
+           gLineNo, (int)gInFile.tellg(), getChar(), getContext().c_str());
   exit(0);
 }
 
-void printError(const char *c) {
-  printf("Unable to compile due to error %s at Line: %d FilePosition:%d \r\n",
+void printError(int lineno, const char *c) {
+  printf("%d:Unable to compile due to error %s at Line: %d FilePosition:%d \r\n",
+      lineno,
       c, gLineNo, (int)gInFile.tellg());
-  printf("Remaining Code: %s", getContext().c_str());
+  printf("Remaining Code: %c%s", getChar(), getContext().c_str());
   exit(0);
 }
 
@@ -97,6 +99,9 @@ void parseComment() {
     printf("Enter %s\r\n", __PRETTY_FUNCTION__);
   }
   while (getnextChar() != '\n');
+  //Skip \n
+  getnextChar();
+  gLineNo++;
   if (debug) {
     printf("Exit %s\r\n", __PRETTY_FUNCTION__);
   }
@@ -118,20 +123,18 @@ void parseArgs() {
   if (i == gArgsLen) {
     sprintf(errmsg, "Invalid argument (a%c) used in the program", 
             getChar());
-    printError(errmsg);
+    printError(__LINE__, errmsg);
   }
-  getnextChar();
   if (debug) {
     printf("Exit %s\r\n", __PRETTY_FUNCTION__);
   }
 }
 
 //Guess this should return an LLVM object
-void parseArithmeticOperation() {
+void parseArithmeticOperation(char oper) {
   if (debug) {
     printf("Enter %s\r\n", __PRETTY_FUNCTION__);
   }
-  char oper = getChar();
   parseExpression();
   parseExpression();
   //Get Oper1
@@ -148,8 +151,9 @@ void parseNumber() {
   }
   int num = 0, count = 0;
   char ch = getChar();
-  while  ((ch >= 0) && (ch <= 9)) {
+  while  ((ch >= '0') && (ch <= '9')) {
     num = (num * 10 * count++) + (0 + (ch - '0'));
+    ch = getnextChar();
   }
   //changed the int to number;
   if (debug) {
@@ -191,7 +195,7 @@ void parseBoolExpression() {
 
   skipSpaces();
 
-  char ch = getnextChar();
+  char ch = getChar();
 
   if (accept('t') && accept('r') && accept('u') && accept('e')) {
     //Its a true condition
@@ -202,10 +206,13 @@ void parseBoolExpression() {
              (ch == '!')) {
     parseRelationalOperation(); 
   } else if (ch == ('(')) {
+    getnextChar();
     parseBoolExpression();
     if (accept(')') == false) {
-      printError("Missing ) Paranthesis in boolean exp");
+      printError(__LINE__, "Missing ) Paranthesis in boolean exp");
     }
+  } else {
+    printError(__LINE__, "Boolean expression Missing");
   }
 
   if (debug) {
@@ -223,7 +230,7 @@ void parseIf() {
       parseExpression();
       parseExpression();
   } else {
-    printError();
+    printError(__LINE__);
   }
   if (debug) {
     printf("Exit %s\r\n", __PRETTY_FUNCTION__);
@@ -235,7 +242,7 @@ void skipSpaces() {
     printf("Enter %s\r\n", __PRETTY_FUNCTION__);
   }
 
-  while (true) {
+  while (getChar() != EOF) {
     if (accept(' ')) {
       continue;
     } else if (accept('\n')) {
@@ -262,10 +269,9 @@ void parseExpression() {
 
   char ch = getChar();
 
-  while (ch != EOF) {
+  do{
     if (ch == '#') {
       parseComment();
-      getnextChar();
     } else if (ch == 'a') {
       parseArgs();
       break;
@@ -277,16 +283,19 @@ void parseExpression() {
       //Ignore White space
     } else if ((ch == '+') || (ch == '-') || (ch == '*') || 
                (ch == '/') || (ch == '%')) {
-      parseArithmeticOperation(); 
+      getnextChar();
+      parseArithmeticOperation(ch); 
       break;
-    } else if ((ch >= 0) && (ch <= 9)) {
-      return parseNumber();
+    } else if ((ch >= '0') && (ch <= '9')) {
+      parseNumber();
+      break;
     } else if (ch == '(') {
       getnextChar();
-      return parseExpression();
-      if (check(')') == false) {
-        printError("Missing Matching paranthesis");
+      parseExpression();
+      if (accept(')') == false) {
+        printError(__LINE__, "Missing Matching paranthesis");
       }
+      break;
     } else if (ch == 'i') {
       parseIf();
       break;
@@ -294,10 +303,10 @@ void parseExpression() {
       getnextChar();
       break;
     } else {
-      printError();
+      printError(__LINE__);
     }
-    ch = getnextChar();
-  }
+    ch = getChar();
+  }while (ch != EOF);
   if (debug) {
     printf("Exit %s\r\n", __PRETTY_FUNCTION__);
   }
@@ -317,10 +326,10 @@ void parser() {
       if (getChar() == EOF) {
         break;
       } else {
-        printError();
+        printError(__LINE__);
       }
     }
-    ch = getnextChar();
+    ch = getChar();
   }
   printf("Parsed successfully\r\n");
   if (debug) {
