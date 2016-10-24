@@ -10,6 +10,7 @@
 #include <cassert>
 #include <iostream>
 #include <fstream>
+<<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
 <<<<<<< e3a85e8828d8e4f737053287d07d64811bf70813
 <<<<<<< a950ae686d28d2d6a86a474bb576227ca5c8f693
 #include <cmath>
@@ -18,6 +19,8 @@
 =======
 #include <cmath>
 >>>>>>> Done. Add comments and make it neat
+=======
+>>>>>>> parsing done
 
 using namespace llvm;
 using namespace std;
@@ -43,6 +46,7 @@ void skipSpaces(string tab);
 =======
 static std::unique_ptr<Module> M = llvm::make_unique<Module>("calc", C);
 static ifstream gInFile;
+<<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
 =======
 static std::unique_ptr<Module> M = llvm::make_unique<Module>("", C);
 static std::map<int, Value *> gArgValues;
@@ -83,15 +87,28 @@ void skipSpaces();
 Value* parseExpression(string tab);
 void skipSpaces(string tab);
 >>>>>>> fixed the code to read input from file
+=======
+char gCurValue = -1;
+int  gArgsLen = 6;
+int  gLineNo = 1;
+enum oper {ADD = 0, SUB, MUL, DIV, MOD};
+bool debug = true;
+
+void parseExpression();
+void skipSpaces();
+>>>>>>> parsing done
 
 void usage(void) {
   printf("executable <input file.calc>\r\n");
   return;
 }
 
+<<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
 <<<<<<< e3a85e8828d8e4f737053287d07d64811bf70813
 <<<<<<< a950ae686d28d2d6a86a474bb576227ca5c8f693
 =======
+=======
+>>>>>>> parsing done
 bool openFile(int argc, char **argv) {
   if (argc < 2) {
     usage();
@@ -101,14 +118,18 @@ bool openFile(int argc, char **argv) {
   return true;
 }
 
+<<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
 >>>>>>> parsing done
 =======
 >>>>>>> Done. Add comments and make it neat
+=======
+>>>>>>> parsing done
 char getChar() {
   return gCurValue;
 }
 
 void nextChar(void) {
+<<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
 <<<<<<< e3a85e8828d8e4f737053287d07d64811bf70813
 <<<<<<< a950ae686d28d2d6a86a474bb576227ca5c8f693
   if (!cin.eof()) {
@@ -124,6 +145,10 @@ void nextChar(void) {
     gLineOffset++;
     gOffset++;
 >>>>>>> Done. Add comments and make it neat
+=======
+  if (!gInFile.eof()) {
+    gCurValue = gInFile.get();
+>>>>>>> parsing done
   } else {
     gCurValue = EOF;
   }
@@ -151,6 +176,7 @@ bool check(char c) {
 
 string getContext() {
   string context;
+<<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
 <<<<<<< e3a85e8828d8e4f737053287d07d64811bf70813
 <<<<<<< a950ae686d28d2d6a86a474bb576227ca5c8f693
   getline(cin, context);
@@ -246,14 +272,52 @@ Value* parseArgs(string tab) {
 =======
 
 >>>>>>> Done. Add comments and make it neat
+=======
+  getline(gInFile, context);
+  return context;
+}
+
+void printError() {
+  printf ("Invalid statement at LineNo:%d:%d - %s",
+           gLineNo, (int)gInFile.tellg(), getContext().c_str());
+  exit(0);
+}
+
+void printError(const char *c) {
+  printf("Unable to compile due to error %s at Line: %d FilePosition:%d \r\n",
+      c, gLineNo, (int)gInFile.tellg());
+  printf("Remaining Code: %s", getContext().c_str());
+  exit(0);
+}
+
+void parseComment() {
+  if (debug) {
+    printf("Enter %s\r\n", __PRETTY_FUNCTION__);
+  }
+  while (getnextChar() != '\n');
+  if (debug) {
+    printf("Exit %s\r\n", __PRETTY_FUNCTION__);
+  }
+}
+
+void parseArgs() {
+  char errmsg[50];
+  if (debug) {
+    printf("Enter %s\r\n", __PRETTY_FUNCTION__);
+  }
+  int i;
+>>>>>>> parsing done
   //Move the pointer next to a
   getnextChar();
   for (i = 0; i < gArgsLen; i++) {
     if (accept('0' + (i - 0))) { //Change from int to char
+<<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
 <<<<<<< e3a85e8828d8e4f737053287d07d64811bf70813
 <<<<<<< d77025b4cd63efe9d68522c1c85219a17ecc7564
 <<<<<<< a950ae686d28d2d6a86a474bb576227ca5c8f693
       result = gArgValues[i];
+=======
+>>>>>>> parsing done
 =======
 >>>>>>> parsing done
       break;
@@ -262,6 +326,7 @@ Value* parseArgs(string tab) {
   if (i == gArgsLen) {
     sprintf(errmsg, "Invalid argument (a%c) used in the program", 
             getChar());
+<<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
 <<<<<<< c3573d72b2a3e3bb5d707a8abb1d30ccb8f9f606
 <<<<<<< a950ae686d28d2d6a86a474bb576227ca5c8f693
     printError(__LINE__, errmsg);
@@ -1128,12 +1193,137 @@ void skipSpaces(string tab) {
 =======
       gLineOffset = 1;
 >>>>>>> Working
+=======
+    printError(errmsg);
+  }
+  getnextChar();
+  if (debug) {
+    printf("Exit %s\r\n", __PRETTY_FUNCTION__);
+  }
+}
+
+//Guess this should return an LLVM object
+void parseArithmeticOperation() {
+  if (debug) {
+    printf("Enter %s\r\n", __PRETTY_FUNCTION__);
+  }
+  char oper = getChar();
+  parseExpression();
+  parseExpression();
+  //Get Oper1
+  //Oper1 = parseExpression();
+  //Oper2 = parseExpression();
+  if (debug) {
+    printf("Exit %s\r\n", __PRETTY_FUNCTION__);
+  }
+}
+
+void parseNumber() {
+  if (debug) {
+    printf("Enter %s\r\n", __PRETTY_FUNCTION__);
+  }
+  int num = 0, count = 0;
+  char ch = getChar();
+  while  ((ch >= 0) && (ch <= 9)) {
+    num = (num * 10 * count++) + (0 + (ch - '0'));
+  }
+  //changed the int to number;
+  if (debug) {
+    printf("Exit %s\r\n", __PRETTY_FUNCTION__);
+  }
+}
+
+void parseRelationalOperation() {
+  if (debug) {
+    printf("Enter %s\r\n", __PRETTY_FUNCTION__);
+  }
+
+  if (accept('>')) {
+    //This is greater than
+    if (accept('=')) {
+      //This is greater than equals 
+    }
+  } else if (accept('<')) {
+    //This is less than
+    if (accept('=')) {
+      //This is less than equals 
+    }
+  } else if (accept('!') && accept('=')) {
+    //This is not equal to
+  } else if (accept('=') && accept('=')) {
+    //This is double equals 
+  }
+  parseExpression();
+  parseExpression();
+  if (debug) {
+    printf("Exit %s\r\n", __PRETTY_FUNCTION__);
+  }
+}
+
+void parseBoolExpression() {
+  if (debug) {
+    printf("Enter %s\r\n", __PRETTY_FUNCTION__);
+  }
+
+  skipSpaces();
+
+  char ch = getnextChar();
+
+  if (accept('t') && accept('r') && accept('u') && accept('e')) {
+    //Its a true condition
+  } else if (accept('f') && accept('a') && accept('l') 
+      && accept('s') && accept('e')) {
+    //Its a false condition
+  } else if ((ch == '>') || (ch == '<') || (ch == '=') || 
+             (ch == '!')) {
+    parseRelationalOperation(); 
+  } else if (ch == ('(')) {
+    parseBoolExpression();
+    if (accept(')') == false) {
+      printError("Missing ) Paranthesis in boolean exp");
+    }
+  }
+
+  if (debug) {
+    printf("Exit %s\r\n", __PRETTY_FUNCTION__);
+  }
+}
+
+void parseIf() {
+  if (debug) {
+    printf("Enter %s\r\n", __PRETTY_FUNCTION__);
+  }
+  if (accept('i') && accept('f')) {
+    //Move till you find the ( of the bool expression
+      parseBoolExpression();
+      parseExpression();
+      parseExpression();
+  } else {
+    printError();
+  }
+  if (debug) {
+    printf("Exit %s\r\n", __PRETTY_FUNCTION__);
+  }
+}
+
+void skipSpaces() {
+  if (debug) {
+    printf("Enter %s\r\n", __PRETTY_FUNCTION__);
+  }
+
+  while (true) {
+    if (accept(' ')) {
+      continue;
+    } else if (accept('\n')) {
+      gLineNo++;
+>>>>>>> parsing done
       continue;
     }
     break;
   }
 
   if (debug) {
+<<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
 <<<<<<< 3df167b8eb9fffcdcfaf8ab8e33a1aeaa94c31e2
 <<<<<<< a950ae686d28d2d6a86a474bb576227ca5c8f693
     //printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
@@ -1453,6 +1643,88 @@ Value* parser(string tab) {
 >>>>>>> Done. Add comments and make it neat
   return result;
 >>>>>>> Change to add LLVM code
+=======
+    printf("Exit %s\r\n", __PRETTY_FUNCTION__);
+  }
+}
+
+/* This function is called with the current pointer
+ * at ( */
+void parseExpression() {
+  char errmsg[75];
+  if (debug) {
+    printf("Enter %s\r\n", __PRETTY_FUNCTION__);
+  }
+
+  skipSpaces();
+
+  char ch = getChar();
+
+  while (ch != EOF) {
+    if (ch == '#') {
+      parseComment();
+      getnextChar();
+    } else if (ch == 'a') {
+      parseArgs();
+      break;
+    } else if (ch == '\n') {
+      //Increment the line number, so that we can give a 
+      //meaningful error message
+      gLineNo++;
+    } else if (ch == ' ') {
+      //Ignore White space
+    } else if ((ch == '+') || (ch == '-') || (ch == '*') || 
+               (ch == '/') || (ch == '%')) {
+      parseArithmeticOperation(); 
+      break;
+    } else if ((ch >= 0) && (ch <= 9)) {
+      return parseNumber();
+    } else if (ch == '(') {
+      getnextChar();
+      return parseExpression();
+      if (check(')') == false) {
+        printError("Missing Matching paranthesis");
+      }
+    } else if (ch == 'i') {
+      parseIf();
+      break;
+    } else if (ch == ')') {
+      getnextChar();
+      break;
+    } else {
+      printError();
+    }
+    ch = getnextChar();
+  }
+  if (debug) {
+    printf("Exit %s\r\n", __PRETTY_FUNCTION__);
+  }
+}
+
+void parser() {
+  if (debug) {
+    printf("Enter %s\r\n", __PRETTY_FUNCTION__);
+  }
+  char ch = getnextChar();
+  while(ch != EOF) {
+    if (ch == '#') {
+      parseComment();
+    } else {
+      parseExpression();
+      skipSpaces();
+      if (getChar() == EOF) {
+        break;
+      } else {
+        printError();
+      }
+    }
+    ch = getnextChar();
+  }
+  printf("Parsed successfully\r\n");
+  if (debug) {
+    printf("Exit %s\r\n", __PRETTY_FUNCTION__);
+  }
+>>>>>>> parsing done
 }
 
 static int compile() {
@@ -1509,6 +1781,7 @@ static int compile() {
 }
 
 int main(int argc, char **argv) { 
+<<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
 <<<<<<< e3a85e8828d8e4f737053287d07d64811bf70813
 <<<<<<< a950ae686d28d2d6a86a474bb576227ca5c8f693
 =======
@@ -1534,4 +1807,11 @@ int main(int argc, char **argv) {
 >>>>>>> fixed the code to read input from file
 =======
 >>>>>>> Done. Add comments and make it neat
+=======
+  if (openFile(argc, argv) == true) {
+    parser();
+    //return compile(); 
+  } 
+  return -1;
+>>>>>>> parsing done
 }
