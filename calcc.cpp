@@ -143,13 +143,20 @@ void skipSpaces();
 =======
 static std::unique_ptr<Module> M = llvm::make_unique<Module>("", C);
 static std::map<int, Value *> gArgValues;
+<<<<<<< 4246cb286c5eb99ddbe329e423f2a537fa6384ca
 >>>>>>> Done. Add comments and make it neat
+=======
+static vector<Value*> mutables(10);
+static Value *zero = ConstantInt::get(C, APInt(64, 0));
+>>>>>>> parsing done
 char gCurValue = -1;
 int  gArgsLen = 6;
 int  gLineNo = 1;
 bool debug = false;
+bool integerOverflow = false;
+int  gLineOffset = 0;
 int  gOffset = 0;
-
+bool use_select = false;
 
 
 <<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
@@ -240,6 +247,7 @@ void nextChar(void) {
 =======
   if (!cin.eof()) {
     gCurValue = cin.get();
+    gLineOffset++;
     gOffset++;
 >>>>>>> Done. Add comments and make it neat
   } else {
@@ -382,27 +390,28 @@ Value* parseArgs(string tab) {
 void printError(int lineno) {
   printf ("%d:Invalid statement at LineNo:%d:%d - %c%s",
            lineno,
-           gLineNo, gOffset, getChar(), getContext().c_str());
+           gLineNo, gLineOffset, getChar(), getContext().c_str());
   exit(1);
 }
 
 void printError(int lineno, const char *c) {
   printf("%d:Unable to compile due to error \"%s\" at Line: %d Offset:%d \r\n",
       lineno,
-      c, gLineNo, gOffset);
+      c, gLineNo, gLineOffset);
   printf("Remaining Code: %c%s", getChar(), getContext().c_str());
   exit(1);
 }
 
 void parseComment(string tab) {
+  char ch;
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
   while (getnextChar() != '\n');
   //Skip \n
-  getnextChar();
+  ch = getnextChar();
   gLineNo++;
-  gOffset = 0;
+  gLineOffset = 1;
   if (debug) {
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
@@ -423,6 +432,7 @@ Value* parseArgs(string tab) {
 >>>>>>> parsing done
 =======
 
+<<<<<<< 4246cb286c5eb99ddbe329e423f2a537fa6384ca
 >>>>>>> Done. Add comments and make it neat
   //Move the pointer next to a
   getnextChar();
@@ -467,17 +477,38 @@ Value* parseArgs(string tab) {
 =======
 >>>>>>> Done. Add comments and make it neat
     printError(__LINE__, errmsg);
+=======
+  //Consume a
+  if (accept('a')) {
+    for (i = 0; i < gArgsLen; i++) {
+      if (accept('0' + (i - 0))) { //Change from int to char
+        result = gArgValues[i];
+        break;
+      }  
+    }
+    if (i == gArgsLen) {
+      sprintf(errmsg, "Invalid argument (a%c) used in the program", 
+              getChar());
+      printError(__LINE__, errmsg);
+    }
+  } else {
+    printError(__LINE__);
+>>>>>>> parsing done
   }
 
   if (debug) {
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
   return result;
+<<<<<<< 4246cb286c5eb99ddbe329e423f2a537fa6384ca
 <<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
+=======
+>>>>>>> parsing done
 }
 
 Value* parseMutables(string tab) {
   char errmsg[50];
+<<<<<<< 4246cb286c5eb99ddbe329e423f2a537fa6384ca
   int i;
   Value *result = NULL;
   if (debug) {
@@ -491,8 +522,28 @@ Value* parseMutables(string tab) {
       result = mutables[i];
       break;
     }  
+=======
+  int i = 0;
+  Value *result = NULL;
+  if (debug) {
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+>>>>>>> parsing done
   }
-  if (i == gArgsLen) {
+
+  //Consume m
+  if (accept('m')) {
+    for (; i < mutables.size(); i++) {
+      if (accept('0' + (i - 0))) { //Change from int to char
+        //result = Builder.CreateLoad(mutables[i]);
+        result = mutables[i];
+        break;
+      }  
+    }
+  } else {
+    printError(__LINE__, "Expecting a Mutable variable");
+  }
+
+  if (i == mutables.size()) {
     sprintf(errmsg, "Invalid argument (a%c) used in the program", 
             getChar());
     printError(__LINE__, errmsg);
@@ -507,12 +558,175 @@ Value* parseMutables(string tab) {
 >>>>>>> Done. Add comments and make it neat
 }
 
+<<<<<<< 4246cb286c5eb99ddbe329e423f2a537fa6384ca
 
+=======
+Function* createDivWithOverFlow(string tab) {
+  std::map<int, Value *> divArgs;
+  Value *didOverflow = NULL, *result = NULL;
+  if (debug) {
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  std::vector<Type *> TwoInts(2, Type::getInt64Ty(C));
+  Type *retTypes[] = {Type::getInt64Ty(C), Type::getInt1Ty(C)};
+  StructType* retType = StructType::get(C, ArrayRef<Type *>(retTypes, 2)); 
+
+  FunctionType *FT = FunctionType::get(retType, TwoInts, false);
+  Function *F = Function::Create(FT, Function::ExternalLinkage,
+                    "sdiv_with_overflow", &*M);
+  BasicBlock *BB = BasicBlock::Create(C, "entry", F);
+  Builder.SetInsertPoint(BB);
+
+  divArgs.clear();
+  int argCount = 0;
+  for (auto &Arg : F->args()) { 
+    divArgs[argCount++] = &Arg;
+  }
+
+  didOverflow = Builder.CreateAnd(
+                        Builder.CreateICmpEQ(divArgs[0], 
+                                ConstantInt::get(Type::getInt64Ty(C), 
+                                                 APInt::getSignedMinValue(64))),
+                        Builder.CreateICmpEQ(divArgs[1],
+                                ConstantInt::get(Type::getInt64Ty(C),
+                                                 APInt(64, -1, true/*isSigned*/))),
+                        "oper1 == IntMIN and oper2 == -1");
+  didOverflow = Builder.CreateOr(didOverflow, 
+                        Builder.CreateICmpEQ(divArgs[1],
+                                ConstantInt::get(Type::getInt64Ty(C), 
+                                                 APInt::getNullValue(64))),
+                        "or oper2 == 0");
+  result = Builder.CreateSDiv(divArgs[0], divArgs[1], "divtmp");
+  Value *res =  ConstantStruct::get(retType, result, didOverflow, NULL);
+  Builder.CreateRet(res);
+  verifyFunction(*F);
+
+  if (debug) {
+    printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  return F;
+}
+
+void createCallToTrap(int pos, string tab) {
+  if (debug) {
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  string fName = "overflow_fail";
+  Function *F = M->getFunction(fName); 
+
+  //Check if the function is already present. Then return, else add
+  if (F == NULL) {
+    std::vector<Type *> OneInt(1, Type::getInt64Ty(C));
+    FunctionType *FT = FunctionType::get(Type::getInt64Ty(C), OneInt, false);
+    F = Function::Create(FT, Function::ExternalLinkage,
+                     fName, &*M);
+  }
+  Value *position[1] = {ConstantInt::get(Type::getInt64Ty(C), pos)}; 
+  Builder.CreateCall(F, ArrayRef<Value *>(position, 1), "calltrap");
+  if (debug) {
+    printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+}
+
+Value* parseArithmeticOperationWithOverflowCheck(char oper, string tab) {
+  int operatorPosition = gOffset - 1;
+  Value* result = NULL, *didOverflow, *oper1, *oper2;
+  Function *overflowCheckOper = NULL;
+  Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  if (debug) {
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+
+  if (accept(oper) == false) {
+    printError(__LINE__, "Expected an arithmetic operation");
+  }
+
+  oper1 = parseExpression(tab+"\t");
+  oper2 = parseExpression(tab+"\t");
+  Value * intrinsic_args[2] = { oper1, oper2};
+  BasicBlock *CurrentBB = Builder.GetInsertBlock();
+
+  switch (oper) {
+    case '+':
+      overflowCheckOper = 
+        Intrinsic::getDeclaration(&*M, Intrinsic::sadd_with_overflow,
+                                  ArrayRef<Type *>(Type::getInt64Ty(C)));
+      break;
+    case '-':
+      overflowCheckOper = 
+        Intrinsic::getDeclaration(&*M, Intrinsic::ssub_with_overflow,
+                                  ArrayRef<Type *>(Type::getInt64Ty(C)));
+      break;
+    case '*':
+      overflowCheckOper = 
+        Intrinsic::getDeclaration(&*M, Intrinsic::smul_with_overflow,
+                                  ArrayRef<Type *>(Type::getInt64Ty(C)));
+      break;
+    case '/':
+      didOverflow = Builder.CreateAnd(
+                            Builder.CreateICmpEQ(oper1, 
+                                    ConstantInt::get(Type::getInt64Ty(C), 
+                                                     APInt::getSignedMinValue(64))),
+                            Builder.CreateICmpEQ(oper2,
+                                    ConstantInt::get(Type::getInt64Ty(C),
+                                                     APInt(64, -1, true/*isSigned*/))),
+                            "oper1 == IntMIN and oper2 == -1");
+      didOverflow = Builder.CreateOr(didOverflow, 
+                            Builder.CreateICmpEQ(oper2,
+                                    ConstantInt::get(Type::getInt64Ty(C), 
+                                                     APInt::getNullValue(64))),
+                            "or oper2 == 0");
+      break;
+    case '%':
+      didOverflow = Builder.CreateICmpEQ(oper2,
+                              ConstantInt::get(Type::getInt64Ty(C), 
+                                             APInt::getNullValue(64)),
+                            "oper2 == 0");
+      break;
+    default:
+      printError(__LINE__, "Fatal error in compiler. Cannot reach here");
+  }
+
+  Builder.SetInsertPoint(CurrentBB);
+  if (overflowCheckOper != NULL) {
+    Value* v = Builder.CreateCall(overflowCheckOper, 
+                                ArrayRef<Value *>(intrinsic_args, 2));
+    result = Builder.CreateExtractValue(v, 0);
+    didOverflow = Builder.CreateExtractValue(v, 1);
+  }
+
+  BasicBlock *ThenBB = BasicBlock::Create(C, "then");
+  BasicBlock *ElseBB = BasicBlock::Create(C, "else");
+
+  Builder.CreateCondBr(didOverflow, ThenBB, ElseBB);
+  TheFunction->getBasicBlockList().push_back(ThenBB);
+  Builder.SetInsertPoint(ThenBB);
+  createCallToTrap(operatorPosition, tab+"\t");
+  Builder.CreateBr(ElseBB);
+  TheFunction->getBasicBlockList().push_back(ElseBB);
+  Builder.SetInsertPoint(ElseBB);
+  if (oper == '/') {
+    result = Builder.CreateSDiv(oper1, oper2, "divtmp");
+  } else if (oper == '%') {
+    result = Builder.CreateSRem(oper1, oper2, "divtmp");
+  }
+
+  if (debug) {
+    printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  return result;
+
+}
+>>>>>>> parsing done
 //Guess this should return an LLVM object
 Value* parseArithmeticOperation(char oper, string tab) {
   Value* result = NULL;
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+
+  if (accept(oper) == false) {
+    printError(__LINE__, "Expected an arithmetic operation");
   }
 
   switch (oper) {
@@ -554,22 +768,31 @@ Value* parseNumber(bool isNegative, string tab) {
 >>>>>>> fixed the code to read input from file
 =======
 Value* parseNegativeNumber(string tab) {
+<<<<<<< 4246cb286c5eb99ddbe329e423f2a537fa6384ca
 >>>>>>> Done. Add comments and make it neat
+=======
+  bool noNumber = true;
+>>>>>>> parsing done
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
 
+<<<<<<< 4246cb286c5eb99ddbe329e423f2a537fa6384ca
 <<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
 <<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
 =======
 >>>>>>> Done. Add comments and make it neat
   long num = 0, oldNum = 0;
+=======
+  unsigned long num = 0, oldNum = 0;
+>>>>>>> parsing done
   char ch = getChar();
 
   while  ((ch >= '0') && (ch <= '9')) {
+    noNumber = false;
     num = (num * 10) - (0 + (ch - '0'));
     ch = getnextChar();
-    if (oldNum < num) {
+    if ((signed long)oldNum < (signed long)num) {
       printError(__LINE__, "Given Number wraps over 64 bits. Invalid input");
     }
     oldNum = num;
@@ -598,6 +821,10 @@ Value* parsePositiveNumber(string tab) {
 =======
   }
 
+  if (noNumber) {
+    printError(__LINE__, "Minus symbol not followed by number");
+  }
+
   if (debug) {
     printf("%sExit %s \r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
@@ -609,14 +836,14 @@ Value* parsePositiveNumber(string tab) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
 
-  long num = 0, oldNum = 0;
+  unsigned long num = 0, oldNum = 0;
   char ch = getChar();
 
 >>>>>>> Done. Add comments and make it neat
   while  ((ch >= '0') && (ch <= '9')) {
     num = (num * 10) + (0 + (ch - '0'));
     ch = getnextChar();
-    if (oldNum > num) {
+    if ((signed long)oldNum > (signed long)num) {
       printError(__LINE__, "Given Number wraps over 64 bits. Invalid input");
     }
     oldNum = num;
@@ -693,7 +920,7 @@ Value* parseBoolExpression(string tab) {
              (ch == '!')) {
     result = parseRelationalOperation(tab+"\t"); 
   } else if (ch == ('(')) {
-    getnextChar();
+    accept('(');
     result = parseBoolExpression(tab+"\t");
     if (accept(')') == false) {
       printError(__LINE__, "Missing ) Paranthesis in boolean exp");
@@ -708,15 +935,63 @@ Value* parseBoolExpression(string tab) {
   return result;
 }
 
+<<<<<<< 4246cb286c5eb99ddbe329e423f2a537fa6384ca
 <<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
+=======
+>>>>>>> parsing done
 Value* parseWhile(string tab) {
   Value *whileValue, *result = NULL;
 
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
+<<<<<<< 4246cb286c5eb99ddbe329e423f2a537fa6384ca
 =======
 Value* parseIf(string tab) {
   Value *result = NULL;
 >>>>>>> fixed the code to read input from file
+=======
+  if (debug) {
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+
+  if (accept('w') && accept('h') && accept('i') && accept('l') && accept('e')) {
+
+    BasicBlock *CurrentBB = Builder.GetInsertBlock();
+    BasicBlock *WhileEntryBB = BasicBlock::Create(C, "whileEntry", TheFunction);
+    BasicBlock *WhileBodyBB = BasicBlock::Create(C, "whileBody", TheFunction);
+    BasicBlock *WhileExitBB = BasicBlock::Create(C, "whileExit", TheFunction);
+
+    Builder.CreateBr(WhileEntryBB);
+    Builder.SetInsertPoint(WhileEntryBB);
+    PHINode *PN = Builder.CreatePHI(zero->getType(), 2, "phiNode");
+    PN->addIncoming(zero, CurrentBB);
+    Builder.CreateCondBr(parseBoolExpression(tab+"\t"), 
+                         WhileBodyBB, WhileExitBB);
+    Builder.SetInsertPoint(WhileBodyBB);
+    whileValue = parseExpression(tab+"\t");
+    WhileBodyBB = Builder.GetInsertBlock();
+    Builder.SetInsertPoint(WhileBodyBB);
+    PN->addIncoming(whileValue, WhileBodyBB);
+    Builder.CreateBr(WhileEntryBB);
+    Builder.SetInsertPoint(WhileExitBB);
+    result = PN;
+  } else {
+    printError(__LINE__);
+  }
+  
+
+  if (debug) {
+    printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  return result;
+}
+
+Value* parseIf(string tab) {
+  Value *result = NULL, *thenValue = NULL, *elseValue = NULL;
+
+  // Create blocks for the then and else cases.  Insert the 'then' block at the
+  // end of the function.
+  Function *TheFunction = Builder.GetInsertBlock()->getParent();
+>>>>>>> parsing done
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
@@ -745,10 +1020,54 @@ Value* parseIf(string tab) {
     result = PN;
 =======
   if (accept('i') && accept('f')) {
+<<<<<<< 4246cb286c5eb99ddbe329e423f2a537fa6384ca
     result = Builder.CreateSelect(parseBoolExpression(tab+"\t"),
                                   parseExpression(tab+"\t"),
                                   parseExpression(tab+"\t"));
 >>>>>>> fixed the code to read input from file
+=======
+    if (use_select == false) {
+      //To add a basic block to a function, 
+      //We can pass the function while creating the block or else use
+      //push_back function over the block list of the function
+      //Here i have used pushback, in while it is while creation
+      BasicBlock *ThenBB = BasicBlock::Create(C, "then");
+      BasicBlock *ElseBB = BasicBlock::Create(C, "else");
+      BasicBlock *MergeBB = BasicBlock::Create(C, "merge");
+      //Based on the branch go to two block
+      Builder.CreateCondBr(parseBoolExpression(tab+"\t"), ThenBB, ElseBB);
+
+      //Now get inside Then block and parse the then expression
+      TheFunction->getBasicBlockList().push_back(ThenBB);
+      Builder.SetInsertPoint(ThenBB);
+      thenValue = parseExpression(tab+"\t");
+      //Now merge then block with mergeblock
+      Builder.CreateBr(MergeBB);
+      //Parse expression of Then could have added more blocks
+      //So we have to update the Then block, so that the edges to the 
+      //PHI node are appropriate
+      ThenBB = Builder.GetInsertBlock();
+
+      //Now do the same as THEN block for ELSE block
+      TheFunction->getBasicBlockList().push_back(ElseBB);
+      Builder.SetInsertPoint(ElseBB);
+      elseValue = parseExpression(tab+"\t");
+      Builder.CreateBr(MergeBB);
+      ElseBB = Builder.GetInsertBlock();
+
+      //Now in the MergeBlock, add a phi node
+      TheFunction->getBasicBlockList().push_back(MergeBB);
+      Builder.SetInsertPoint(MergeBB);
+      PHINode *PN = Builder.CreatePHI(thenValue->getType(), 2, "phiNode");
+      PN->addIncoming(thenValue, ThenBB);
+      PN->addIncoming(elseValue, ElseBB);
+      result = PN;
+    } else {
+      result = Builder.CreateSelect(parseBoolExpression(tab+"\t"),
+                                    parseExpression(tab+"\t"),
+                                    parseExpression(tab+"\t"));
+    }
+>>>>>>> parsing done
   } else {
     printError(__LINE__);
   }
@@ -818,10 +1137,17 @@ void skipSpaces(string tab) {
 =======
   while (getChar() != EOF) {
     if (accept(' ')) {
+      gLineOffset++;
+      continue;
+    } else if (accept('\t')) {
+      gLineOffset++;
+      continue;
+    } else if (accept('\r')) {
+      gLineOffset++;
       continue;
     } else if (accept('\n')) {
       gLineNo++;
-      gOffset = 0;
+      gLineOffset = 1;
       continue;
 >>>>>>> Done. Add comments and make it neat
     }
@@ -839,6 +1165,7 @@ void skipSpaces(string tab) {
   return result;
 }
 
+<<<<<<< 4246cb286c5eb99ddbe329e423f2a537fa6384ca
 <<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
 void skipSpaces(string tab) {
   if (debug) {
@@ -875,7 +1202,44 @@ void skipSpaces(string tab) {
 =======
 Value* parseExpression(string tab) {
   char errmsg[75];
+=======
+Value* parseSeq(string tab) {
+>>>>>>> parsing done
   Value *result;
+  if (debug) {
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+
+  skipSpaces(tab);
+  parseExpression(tab+ "\t");
+  result = parseExpression(tab+ "\t");
+
+  if (debug) {
+    printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  return result;
+}
+
+Value* parseSet(string tab) {
+  Value *result, *mutableVariable;
+  if (debug) {
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+
+  result = parseExpression(tab+"\t");
+  skipSpaces(tab+"\t");
+  mutableVariable = parseMutables(tab+"\t");
+  //Store values onto the mutable variable
+  Builder.CreateStore(result, mutableVariable);
+
+  if (debug) {
+    printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  return result;
+}
+
+Value* parseExpression(string tab) {
+  Value *result = NULL;
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
@@ -913,43 +1277,65 @@ Value* parseArithmeticOperation(char oper) {
 =======
   while (ch != EOF){
     if (ch == '#') {
-      if (gOffset == 0) { 
+      if (gLineOffset == 1) { 
         parseComment(tab+"\t");
+        ch = getChar();
       } else {
         printError(__LINE__, "Encounter Comment in the middle of a line");
       }
     } else if (ch == 'a') {
       result = parseArgs(tab+"\t");
       break;
-    } else if ((ch == '\n') || (ch == ' ')){
+    } else if (ch == 'm') {
+      //Get the mutable variable and do a load operation. The parse mutable
+      //get address of mutable variable. So to get the value 
+      //issue a load operation
+      result = Builder.CreateLoad(parseMutables(tab+"\t"));
+      break;
+    } else if ((ch == '\n') || (ch == ' ') || (ch == '\t')){
       skipSpaces(tab+"\t");
       ch = getChar();
-    } else if ((ch == '+') || (ch == '*') || 
-               (ch == '/') || (ch == '%')) {
-      //Negative case is special, handled below
-      getnextChar();
-      result = parseArithmeticOperation(ch, tab+"\t"); 
-      break;
-    } else if (ch == '-') {
-      if (getnextChar() == ' ') {
-        result = parseArithmeticOperation(ch, tab+"\t"); 
-      } else {
-        result = parseNegativeNumber(tab+"\t");
-      }
-      break;
     } else if ((ch >= '0') && (ch <= '9')) {
       result = parsePositiveNumber(tab+"\t");
       break;
+    } else if (ch == '-') {
+      accept('-');
+      result = parseNegativeNumber(tab+"\t");
+      break;
     } else if (ch == '(') {
-      getnextChar();
-      result = parseExpression(tab+"\t");
+      accept('(');
+      skipSpaces(tab+"\t");
+      ch = getChar(); 
+      if ((ch == '+') || (ch == '*') || (ch == '-') ||
+          (ch == '/') || (ch == '%')) {
+        if (integerOverflow == false) {
+          result = parseArithmeticOperation(ch, tab+"\t"); 
+        } else {
+          result = parseArithmeticOperationWithOverflowCheck(ch, tab+"\t"); 
+        }
+      } else if (ch == 'i') {
+        result = parseIf(tab+"\t");
+      } else if (ch == 's') {
+        if (accept('s') && accept('e'))  {
+          if (accept('q')) {
+            result = parseSeq(tab+"\t");
+          } else if (accept('t')) {
+            result = parseSet(tab+"\t");
+          } else {
+            printError(__LINE__);
+          } 
+        } else {
+          printError(__LINE__);
+        } 
+      } else if (ch == 'w') {
+        result = parseWhile(tab+"\t");
+      } else {
+        printError(__LINE__, "Didnt find a valid expression within ()");
+      }
       skipSpaces(tab+"\t");
       if (accept(')') == false) {
         printError(__LINE__, "Missing Matching paranthesis");
       }
-      break;
-    } else if (ch == 'i') {
-      result = parseIf(tab+"\t");
       break;
     } else {
       printError(__LINE__);
@@ -963,10 +1349,17 @@ Value* parseArithmeticOperation(char oper) {
   return result;
 }
 
+<<<<<<< 4246cb286c5eb99ddbe329e423f2a537fa6384ca
 Value* parseNumber() {
+=======
+Value* parser(string tab) {
+  Value *result = NULL;
+  char ch;
+>>>>>>> parsing done
   if (debug) {
     printf("Enter %s\r\n", __PRETTY_FUNCTION__);
   }
+<<<<<<< 4246cb286c5eb99ddbe329e423f2a537fa6384ca
 
   int num = 0, count = 0;
   bool isNegative = false;
@@ -975,6 +1368,25 @@ Value* parseNumber() {
   if (ch == '-') {
     isNegative = true;
     ch = getnextChar();
+=======
+  //Read the first char and then call parseExpression
+  getnextChar();
+  result = parseExpression(tab+"\t");
+
+  //Skip the spaces after the expression
+  skipSpaces(tab+"\t");
+
+  //The below ch should be EOF or a comment. Else throw error
+  ch = getChar();
+  while(ch != EOF) {
+    if ((ch == '#') && (gLineOffset == 1)) {
+      parseComment(tab+"\t");
+      skipSpaces(tab+"\t");
+      ch = getChar();
+    } else { 
+        printError(__LINE__, "Unknown expression at the end of file");
+    }
+>>>>>>> parsing done
   }
   while  ((ch >= '0') && (ch <= '9')) {
     num = (num * 10 * count++) + (0 + (ch - '0'));
@@ -2952,6 +3364,7 @@ static int compile() {
   for (auto &Arg : F->args()) { 
     gArgValues[argCount++] = &Arg;
   }
+<<<<<<< 4246cb286c5eb99ddbe329e423f2a537fa6384ca
 <<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
 <<<<<<< 4e9ef3470ff8b0d728e461ca258d0a9ffc0ad621
 <<<<<<< 87854e54e3a4851736023e27df7daf2cca00502c
@@ -2961,11 +3374,14 @@ static int compile() {
 =======
 =======
 >>>>>>> Done with coding
+=======
+>>>>>>> parsing done
   for (int i = 0; i < mutables.size(); i++) {
     mutables[i] = Builder.CreateAlloca(Type::getInt64Ty(C), 0, "Mutable"+std::to_string(i));
     Builder.CreateStore(zero, mutables[i]);
 
   }
+<<<<<<< 4246cb286c5eb99ddbe329e423f2a537fa6384ca
 <<<<<<< 4e9ef3470ff8b0d728e461ca258d0a9ffc0ad621
 >>>>>>> Done with coding
 =======
@@ -3015,6 +3431,8 @@ static int compile() {
   //Value *RetVal = ConstantInt::get(C, APInt(64, 0));
 >>>>>>> Adding the parsing code
 =======
+=======
+>>>>>>> parsing done
 
   Value *RetVal = parser("");
 >>>>>>> Done. Add comments and make it neat
@@ -3086,7 +3504,11 @@ int main(int argc, char **argv) {
 >>>>>>> fixed the code to read input from file
 =======
   if (argc > 1) {
+    integerOverflow = true;
+  } 
+  if (argc > 2) {
     debug = true;
+    integerOverflow = true;
   }
   return compile(); 
 >>>>>>> Done. Add comments and make it neat
