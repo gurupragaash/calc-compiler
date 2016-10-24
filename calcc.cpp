@@ -405,8 +405,9 @@ static int compile() {
 
   // TODO: parse the source program
   // TODO: generate correct LLVM instead of just an empty function
+  Value *RetVal = parser();
 
-  Value *RetVal = ConstantInt::get(C, APInt(64, 0));
+  //Value *RetVal = ConstantInt::get(C, APInt(64, 0));
   Builder.CreateRet(RetVal);
   assert(!verifyModule(*M, &outs()));
   M->dump();
@@ -415,8 +416,7 @@ static int compile() {
 
 int main(int argc, char **argv) { 
   if (openFile(argc, argv) == true) {
-    parser();
-    //return compile(); 
+    return compile(); 
   } 
   return -1;
 }
