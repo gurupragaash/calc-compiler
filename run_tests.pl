@@ -4,7 +4,7 @@ use strict;
 
 my $CALCC = $ENV{"CALCC"};
 if (!defined($CALCC)) {
-    $CALCC = "../../build/calcc";
+    $CALCC = "../build/calcc";
 }
 
 die "cannot find compiler!" unless
