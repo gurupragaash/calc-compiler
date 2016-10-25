@@ -83,6 +83,7 @@ int  gOffset = 0;
 <<<<<<< 4e9ef3470ff8b0d728e461ca258d0a9ffc0ad621
 <<<<<<< 87854e54e3a4851736023e27df7daf2cca00502c
 bool use_select = false;
+<<<<<<< af87e32a17b2cb1aa3de1be5759422eda2d04a08
 <<<<<<< 9099d0e8b0a32744f9e439760cd09af651c3b1e1
 =======
 bool use_select = false;
@@ -110,6 +111,10 @@ void skipSpaces();
 >>>>>>> Done. Add comments and make it neat
 =======
 >>>>>>> fixed the code to read input from file
+=======
+
+
+>>>>>>> Done. Add comments and make it neat
 Value* parseExpression(string tab);
 void skipSpaces(string tab);
 >>>>>>> fixed the code to read input from file
@@ -2118,6 +2123,7 @@ Value* parser(string tab) {
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
     printf("Parsed successfully\r\n");
   }
+<<<<<<< af87e32a17b2cb1aa3de1be5759422eda2d04a08
 <<<<<<< d30e234ea8e21fa2b312da24f45132f5c8a9c56b
 <<<<<<< 87854e54e3a4851736023e27df7daf2cca00502c
 <<<<<<< 63e83c850d17b5031a59602e1846f84fa81dbbd6
@@ -2132,6 +2138,8 @@ Value* parser(string tab) {
 =======
   printf("Parsed successfully\r\n");
 >>>>>>> fixed the code to read input from file
+=======
+>>>>>>> Done. Add comments and make it neat
   return result;
 >>>>>>> Change to add LLVM code
 }
