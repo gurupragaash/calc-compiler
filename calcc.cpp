@@ -10,6 +10,7 @@
 #include <cassert>
 #include <iostream>
 #include <fstream>
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
 <<<<<<< bad2c0b86a45e129b59dcee93d9bc1ddd9de3d86
 <<<<<<< 87854e54e3a4851736023e27df7daf2cca00502c
 <<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
@@ -28,12 +29,16 @@
 >>>>>>> Done. Add comments and make it neat
 =======
 >>>>>>> parsing done
+=======
+#include <cmath>
+>>>>>>> Done. Add comments and make it neat
 
 using namespace llvm;
 using namespace std;
 
 static LLVMContext C;
 static IRBuilder<NoFolder> Builder(C);
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
 <<<<<<< 87854e54e3a4851736023e27df7daf2cca00502c
 <<<<<<< e3a85e8828d8e4f737053287d07d64811bf70813
 <<<<<<< a950ae686d28d2d6a86a474bb576227ca5c8f693
@@ -135,10 +140,17 @@ Value* parseExpression();
 void skipSpaces();
 >>>>>>> parsing done
 =======
+=======
+static std::unique_ptr<Module> M = llvm::make_unique<Module>("", C);
+static std::map<int, Value *> gArgValues;
+>>>>>>> Done. Add comments and make it neat
 char gCurValue = -1;
 int  gArgsLen = 6;
 int  gLineNo = 1;
 bool debug = false;
+int  gOffset = 0;
+
+
 
 <<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
 Value* parseExpression();
@@ -154,6 +166,7 @@ void usage(void) {
   return;
 }
 
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
 <<<<<<< bad2c0b86a45e129b59dcee93d9bc1ddd9de3d86
 <<<<<<< 87854e54e3a4851736023e27df7daf2cca00502c
 <<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
@@ -184,11 +197,14 @@ bool openFile(int argc, char **argv) {
 >>>>>>> Done. Add comments and make it neat
 =======
 >>>>>>> parsing done
+=======
+>>>>>>> Done. Add comments and make it neat
 char getChar() {
   return gCurValue;
 }
 
 void nextChar(void) {
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
 <<<<<<< bad2c0b86a45e129b59dcee93d9bc1ddd9de3d86
 <<<<<<< 87854e54e3a4851736023e27df7daf2cca00502c
 <<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
@@ -221,6 +237,11 @@ void nextChar(void) {
   if (!gInFile.eof()) {
     gCurValue = gInFile.get();
 >>>>>>> parsing done
+=======
+  if (!cin.eof()) {
+    gCurValue = cin.get();
+    gOffset++;
+>>>>>>> Done. Add comments and make it neat
   } else {
     gCurValue = EOF;
   }
@@ -248,6 +269,7 @@ bool check(char c) {
 
 string getContext() {
   string context;
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
 <<<<<<< bad2c0b86a45e129b59dcee93d9bc1ddd9de3d86
 <<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
 <<<<<<< e3a85e8828d8e4f737053287d07d64811bf70813
@@ -351,20 +373,23 @@ Value* parseArgs(string tab) {
 =======
 >>>>>>> parsing done
   getline(gInFile, context);
+=======
+  getline(cin, context);
+>>>>>>> Done. Add comments and make it neat
   return context;
 }
 
 void printError(int lineno) {
   printf ("%d:Invalid statement at LineNo:%d:%d - %c%s",
            lineno,
-           gLineNo, (int)gInFile.tellg(), getChar(), getContext().c_str());
+           gLineNo, gOffset, getChar(), getContext().c_str());
   exit(1);
 }
 
 void printError(int lineno, const char *c) {
-  printf("%d:Unable to compile due to error %s at Line: %d FilePosition:%d \r\n",
+  printf("%d:Unable to compile due to error \"%s\" at Line: %d Offset:%d \r\n",
       lineno,
-      c, gLineNo, (int)gInFile.tellg());
+      c, gLineNo, gOffset);
   printf("Remaining Code: %c%s", getChar(), getContext().c_str());
   exit(1);
 }
@@ -377,6 +402,7 @@ void parseComment(string tab) {
   //Skip \n
   getnextChar();
   gLineNo++;
+  gOffset = 0;
   if (debug) {
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
@@ -384,18 +410,25 @@ void parseComment(string tab) {
 
 Value* parseArgs(string tab) {
   char errmsg[50];
+  int i;
+  Value *result = NULL;
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
   int i;
 <<<<<<< bad2c0b86a45e129b59dcee93d9bc1ddd9de3d86
 >>>>>>> parsing done
 =======
 >>>>>>> parsing done
+=======
+
+>>>>>>> Done. Add comments and make it neat
   //Move the pointer next to a
   getnextChar();
   for (i = 0; i < gArgsLen; i++) {
     if (accept('0' + (i - 0))) { //Change from int to char
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
 <<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
 <<<<<<< 6ea1a0ed6ddb2d8e9d63381a9ed8d84c4ccb4d06
 <<<<<<< bad2c0b86a45e129b59dcee93d9bc1ddd9de3d86
@@ -417,15 +450,22 @@ Value* parseArgs(string tab) {
       }
       return ConstantInt::get(Type::getInt64Ty(C), i);
 >>>>>>> fixed the code to read input from file
+=======
+      result = gArgValues[i];
+      break;
+>>>>>>> Done. Add comments and make it neat
     }  
   }
   if (i == gArgsLen) {
     sprintf(errmsg, "Invalid argument (a%c) used in the program", 
             getChar());
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
 <<<<<<< bad2c0b86a45e129b59dcee93d9bc1ddd9de3d86
 <<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
 <<<<<<< c3573d72b2a3e3bb5d707a8abb1d30ccb8f9f606
 <<<<<<< a950ae686d28d2d6a86a474bb576227ca5c8f693
+=======
+>>>>>>> Done. Add comments and make it neat
     printError(__LINE__, errmsg);
   }
 
@@ -433,6 +473,7 @@ Value* parseArgs(string tab) {
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
   return result;
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
 }
 
 Value* parseMutables(string tab) {
@@ -462,6 +503,8 @@ Value* parseMutables(string tab) {
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
   return result;
+=======
+>>>>>>> Done. Add comments and make it neat
 }
 
 
@@ -503,16 +546,23 @@ Value* parseArithmeticOperation(char oper, string tab) {
   return result;
 }
 
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
 <<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
 Value* parseNegativeNumber(string tab) {
 =======
 Value* parseNumber(bool isNegative, string tab) {
 >>>>>>> fixed the code to read input from file
+=======
+Value* parseNegativeNumber(string tab) {
+>>>>>>> Done. Add comments and make it neat
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
 
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
 <<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
+=======
+>>>>>>> Done. Add comments and make it neat
   long num = 0, oldNum = 0;
   char ch = getChar();
 
@@ -523,6 +573,7 @@ Value* parseNumber(bool isNegative, string tab) {
       printError(__LINE__, "Given Number wraps over 64 bits. Invalid input");
     }
     oldNum = num;
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
   }
 
   if (debug) {
@@ -544,6 +595,24 @@ Value* parsePositiveNumber(string tab) {
   char ch = getChar();
 
 >>>>>>> fixed the code to read input from file
+=======
+  }
+
+  if (debug) {
+    printf("%sExit %s \r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  return ConstantInt::get(C, APInt(64, num));
+}
+
+Value* parsePositiveNumber(string tab) {
+  if (debug) {
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+
+  long num = 0, oldNum = 0;
+  char ch = getChar();
+
+>>>>>>> Done. Add comments and make it neat
   while  ((ch >= '0') && (ch <= '9')) {
     num = (num * 10) + (0 + (ch - '0'));
     ch = getnextChar();
@@ -708,6 +777,7 @@ void skipSpaces(string tab) {
 >>>>>>> fixed the code to read input from file
   }
 
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
   if (accept('i') && accept('f')) {
     if (use_select == false) {
       BasicBlock *ThenBB = BasicBlock::Create(C, "then", TheFunction);
@@ -745,6 +815,15 @@ void skipSpaces(string tab) {
       result = Builder.CreateSelect(parseBoolExpression(tab+"\t"),
                                     parseExpression(tab+"\t"),
                                     parseExpression(tab+"\t"));
+=======
+  while (getChar() != EOF) {
+    if (accept(' ')) {
+      continue;
+    } else if (accept('\n')) {
+      gLineNo++;
+      gOffset = 0;
+      continue;
+>>>>>>> Done. Add comments and make it neat
     }
   } else {
     printError(__LINE__);
@@ -811,6 +890,7 @@ Value* parseArithmeticOperation(char oper) {
     printf("Enter %s\r\n", __PRETTY_FUNCTION__);
   }
 
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
 <<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
   switch (oper) {
   case '+':
@@ -830,6 +910,51 @@ Value* parseArithmeticOperation(char oper) {
 					  								 	  parseExpression(), "modtmp");
   default:
     printError(__LINE__, "Fatal error in compiler. Cannot reach here");
+=======
+  while (ch != EOF){
+    if (ch == '#') {
+      if (gOffset == 0) { 
+        parseComment(tab+"\t");
+      } else {
+        printError(__LINE__, "Encounter Comment in the middle of a line");
+      }
+    } else if (ch == 'a') {
+      result = parseArgs(tab+"\t");
+      break;
+    } else if ((ch == '\n') || (ch == ' ')){
+      skipSpaces(tab+"\t");
+      ch = getChar();
+    } else if ((ch == '+') || (ch == '*') || 
+               (ch == '/') || (ch == '%')) {
+      //Negative case is special, handled below
+      getnextChar();
+      result = parseArithmeticOperation(ch, tab+"\t"); 
+      break;
+    } else if (ch == '-') {
+      if (getnextChar() == ' ') {
+        result = parseArithmeticOperation(ch, tab+"\t"); 
+      } else {
+        result = parseNegativeNumber(tab+"\t");
+      }
+      break;
+    } else if ((ch >= '0') && (ch <= '9')) {
+      result = parsePositiveNumber(tab+"\t");
+      break;
+    } else if (ch == '(') {
+      getnextChar();
+      result = parseExpression(tab+"\t");
+      skipSpaces(tab+"\t");
+      if (accept(')') == false) {
+        printError(__LINE__, "Missing Matching paranthesis");
+      }
+      break;
+    } else if (ch == 'i') {
+      result = parseIf(tab+"\t");
+      break;
+    } else {
+      printError(__LINE__);
+    }
+>>>>>>> Done. Add comments and make it neat
   }
 
   if (debug) {
@@ -2760,20 +2885,37 @@ Value* parser(string tab) {
   while(ch != EOF) {
     if (ch == '#') {
       parseComment(tab+"\t");
-    } else {
-      result = parseExpression(tab+"\t");
+    } else if ((ch == ' ') | (ch == '\n')) {
       skipSpaces(tab+"\t");
-      if (getChar() == EOF) {
+      //If there is a space, then only expression can follow, else
+      //throw an error
+      if (check('(') == true) {
+        result = parseExpression(tab+"\t");
+        skipSpaces(tab+"\t");
+        if (getChar() != EOF) {
+          printError(__LINE__, "Unknown expression at the end of file");
+        }
         break;
       } else {
-        printError(__LINE__);
+        printError(__LINE__, "Expected an expression. But not found");
       }
+    } else if (ch == '(') {
+      result = parseExpression(tab+"\t");
+      skipSpaces(tab+"\t");
+      if (getChar() != EOF) {
+        printError(__LINE__, "Unknown expression at the end of file");
+      }
+      break;
+    } else {
+      printError(__LINE__, "Didnt find a comment or an expression");
     }
     ch = getChar();
   }
   if (debug) {
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+    printf("Parsed successfully\r\n");
   }
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
 <<<<<<< b4fdd20fc8f1942071c8d8f80c8f104d69b8f54f
 <<<<<<< 6ea1a0ed6ddb2d8e9d63381a9ed8d84c4ccb4d06
 >>>>>>> parsing done
@@ -2781,6 +2923,8 @@ Value* parser(string tab) {
 =======
   printf("Parsed successfully\r\n");
 >>>>>>> fixed the code to read input from file
+=======
+>>>>>>> Done. Add comments and make it neat
   return result;
 >>>>>>> Change to add LLVM code
 }
@@ -2793,9 +2937,12 @@ static int compile() {
   BasicBlock *BB = BasicBlock::Create(C, "entry", F);
   Builder.SetInsertPoint(BB);
 
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
 <<<<<<< 87854e54e3a4851736023e27df7daf2cca00502c
 <<<<<<< e3a85e8828d8e4f737053287d07d64811bf70813
 <<<<<<< 007b32a346b51a1ed2d3aca298a9aa441cd05678
+=======
+>>>>>>> Done. Add comments and make it neat
 =======
 >>>>>>> Done. Add comments and make it neat
 =======
@@ -2805,6 +2952,7 @@ static int compile() {
   for (auto &Arg : F->args()) { 
     gArgValues[argCount++] = &Arg;
   }
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
 <<<<<<< 4e9ef3470ff8b0d728e461ca258d0a9ffc0ad621
 <<<<<<< 87854e54e3a4851736023e27df7daf2cca00502c
 <<<<<<< 9099d0e8b0a32744f9e439760cd09af651c3b1e1
@@ -2866,6 +3014,10 @@ static int compile() {
 
   //Value *RetVal = ConstantInt::get(C, APInt(64, 0));
 >>>>>>> Adding the parsing code
+=======
+
+  Value *RetVal = parser("");
+>>>>>>> Done. Add comments and make it neat
   Builder.CreateRet(RetVal);
   M->dump();
   assert(!verifyModule(*M, &outs()));
@@ -2873,6 +3025,7 @@ static int compile() {
 }
 
 int main(int argc, char **argv) { 
+<<<<<<< 6069f9f1e684feb804ff35a943a932003ab362d8
 <<<<<<< bad2c0b86a45e129b59dcee93d9bc1ddd9de3d86
 <<<<<<< 87854e54e3a4851736023e27df7daf2cca00502c
 <<<<<<< fc99818424e2f53f379eb27931b3727e9599abd5
@@ -2931,4 +3084,10 @@ int main(int argc, char **argv) {
 =======
   return 1;
 >>>>>>> fixed the code to read input from file
+=======
+  if (argc > 1) {
+    debug = true;
+  }
+  return compile(); 
+>>>>>>> Done. Add comments and make it neat
 }
