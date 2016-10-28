@@ -69,15 +69,24 @@ static Value *zero = ConstantInt::get(C, APInt(64, 0));
 =======
 static std::unique_ptr<Module> M = llvm::make_unique<Module>("", C);
 static std::map<int, Value *> gArgValues;
+<<<<<<< 4e9ef3470ff8b0d728e461ca258d0a9ffc0ad621
 >>>>>>> Done. Add comments and make it neat
+=======
+static vector<Value*> mutables(10);
+static Value *zero = ConstantInt::get(C, APInt(64, 0));
+>>>>>>> Done with coding
 char gCurValue = -1;
 int  gArgsLen = 6;
 int  gLineNo = 1;
 bool debug = false;
 int  gOffset = 0;
+<<<<<<< 4e9ef3470ff8b0d728e461ca258d0a9ffc0ad621
 <<<<<<< 87854e54e3a4851736023e27df7daf2cca00502c
 bool use_select = false;
 <<<<<<< 9099d0e8b0a32744f9e439760cd09af651c3b1e1
+=======
+bool use_select = false;
+>>>>>>> Done with coding
 
 <<<<<<< ef1e94be58d02a5bab3d4d3b3206f78a6e04f929
 =======
@@ -189,6 +198,17 @@ bool accept(char c) {
   }
   return false;
 }
+
+/*
+bool accept(string c) {
+  int i = 0, len = c.size();
+  bool retVal = true;
+
+  while ((i < len) && retVal) {
+    retVal &= accept(c[i++]);
+  }
+  return retVal;
+}*/
 
 bool check(char c) {
   if (getChar() == c) {
@@ -1319,6 +1339,35 @@ Value* parseArgs(string tab) {
 >>>>>>> Done. Add comments and make it neat
 }
 
+Value* parseMutables(string tab) {
+  char errmsg[50];
+  int i;
+  Value *result = NULL;
+  if (debug) {
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+
+  //Move the pointer next to a
+  getnextChar();
+  for (i = 0; i < mutables.size(); i++) {
+    if (accept('0' + (i - 0))) { //Change from int to char
+      result = mutables[i];
+      break;
+    }  
+  }
+  if (i == gArgsLen) {
+    sprintf(errmsg, "Invalid argument (a%c) used in the program", 
+            getChar());
+    printError(__LINE__, errmsg);
+  }
+
+  if (debug) {
+    printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  return result;
+}
+
+
 //Guess this should return an LLVM object
 Value* parseArithmeticOperation(char oper, string tab) {
   Value* result = NULL;
@@ -1483,16 +1532,95 @@ Value* parseBoolExpression(string tab) {
   return result;
 }
 
+Value* parseWhile(string tab) {
+  Value *whileValue, *result = NULL;
+
+  Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  if (debug) {
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+
+  if (accept('w') && accept('h') && accept('i') && accept('l') && accept('e')) {
+
+    BasicBlock *CurrentBB = Builder.GetInsertBlock();
+    BasicBlock *WhileEntryBB = BasicBlock::Create(C, "whileEntry", TheFunction);
+    BasicBlock *WhileBodyBB = BasicBlock::Create(C, "whileBody", TheFunction);
+    BasicBlock *WhileExitBB = BasicBlock::Create(C, "whileExit", TheFunction);
+
+    Builder.CreateBr(WhileEntryBB);
+    Builder.SetInsertPoint(WhileEntryBB);
+    PHINode *PN = Builder.CreatePHI(zero->getType(), 2, "phiNode");
+    PN->addIncoming(zero, CurrentBB);
+    Builder.CreateCondBr(parseBoolExpression(tab+"\t"), 
+                         WhileBodyBB, WhileExitBB);
+    Builder.SetInsertPoint(WhileBodyBB);
+    whileValue = parseExpression(tab+"\t");
+    WhileBodyBB = Builder.GetInsertBlock();
+    Builder.SetInsertPoint(WhileBodyBB);
+    PN->addIncoming(whileValue, WhileBodyBB);
+    Builder.CreateBr(WhileEntryBB);
+    Builder.SetInsertPoint(WhileExitBB);
+    result = PN;
+  } else {
+    printError(__LINE__);
+  }
+  
+
+  if (debug) {
+    printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  return result;
+}
+
 Value* parseIf(string tab) {
-  Value *result = NULL;
+  Value *result = NULL, *thenValue = NULL, *elseValue = NULL;
+  //Function *TheFunction = Builder.GetInsertBlock()->getParent();
+
+  // Create blocks for the then and else cases.  Insert the 'then' block at the
+  // end of the function.
+  Function *TheFunction = Builder.GetInsertBlock()->getParent();
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
 
   if (accept('i') && accept('f')) {
-    result = Builder.CreateSelect(parseBoolExpression(tab+"\t"),
-                                  parseExpression(tab+"\t"),
-                                  parseExpression(tab+"\t"));
+    if (use_select == false) {
+      BasicBlock *ThenBB = BasicBlock::Create(C, "then", TheFunction);
+      BasicBlock *ElseBB = BasicBlock::Create(C, "else", TheFunction);
+      BasicBlock *MergeBB = BasicBlock::Create(C, "merge", TheFunction);
+      //Based on the branch go to two block
+      Builder.CreateCondBr(parseBoolExpression(tab+"\t"), ThenBB, ElseBB);
+
+      //Now get inside Then block and parse the then expression
+      TheFunction->getBasicBlockList().push_back(ThenBB);
+      Builder.SetInsertPoint(ThenBB);
+      thenValue = parseExpression(tab+"\t");
+      //Now merge then block with mergeblock
+      Builder.CreateBr(MergeBB);
+      //Parse expression of Then could have added more blocks
+      //So we have to update the Then block, so that the edges to the 
+      //PHI node are appropriate
+      ThenBB = Builder.GetInsertBlock();
+
+      //Now do the same as THEN block for ELSE block
+      TheFunction->getBasicBlockList().push_back(ElseBB);
+      Builder.SetInsertPoint(ElseBB);
+      elseValue = parseExpression(tab+"\t");
+      Builder.CreateBr(MergeBB);
+      ElseBB = Builder.GetInsertBlock();
+
+      //Now in the MergeBlock, add a phi node
+      TheFunction->getBasicBlockList().push_back(MergeBB);
+      Builder.SetInsertPoint(MergeBB);
+      PHINode *PN = Builder.CreatePHI(thenValue->getType(), 2, "phiNode");
+      PN->addIncoming(thenValue, ThenBB);
+      PN->addIncoming(elseValue, ElseBB);
+      result = PN;
+    } else {
+      result = Builder.CreateSelect(parseBoolExpression(tab+"\t"),
+                                    parseExpression(tab+"\t"),
+                                    parseExpression(tab+"\t"));
+    }
   } else {
     printError(__LINE__);
   }
@@ -1853,6 +1981,39 @@ Value* parser(string tab) {
   }
 }
 
+Value* parseSeq(string tab) {
+  Value *result;
+  if (debug) {
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+
+  skipSpaces(tab);
+  parseExpression(tab+ "\t");
+  result = parseExpression(tab+ "\t");
+
+  if (debug) {
+    printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  return result;
+}
+
+Value* parseSet(string tab) {
+  Value *result, *mutableVariable;
+  if (debug) {
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+
+  result = parseExpression(tab+"\t");
+  skipSpaces(tab+"\t");
+  mutableVariable = parseMutables(tab+"\t");
+  Builder.CreateStore(result, mutableVariable);
+
+  if (debug) {
+    printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  return result;
+}
+
 Value* parseExpression(string tab) {
   char errmsg[75];
   Value *result;
@@ -1904,6 +2065,22 @@ Value* parseExpression(string tab) {
     } else if (ch == 'i') {
       result = parseIf(tab+"\t");
       break;
+    } else if (ch == 's') {
+      if (accept('s') && accept('e'))  {
+        if (accept('q')) {
+          result = parseSeq(tab+"\t");
+          break;
+        } else if (accept('t')) {
+          result = parseSet(tab+"\t");
+          break;
+        } 
+      }
+      //If its not a 'seq' or 'set' but starting with 's' or 'se', 
+      //throw error
+      printError(__LINE__);
+    } else if (ch == 'w') {
+      result = parseWhile(tab+"\t");
+      break;
     } else {
       printError(__LINE__);
     }
@@ -1924,29 +2101,13 @@ Value* parser(string tab) {
   while(ch != EOF) {
     if (ch == '#') {
       parseComment(tab+"\t");
-    } else if ((ch == ' ') | (ch == '\n')) {
-      skipSpaces(tab+"\t");
-      //If there is a space, then only expression can follow, else
-      //throw an error
-      if (check('(') == true) {
-        result = parseExpression(tab+"\t");
-        skipSpaces(tab+"\t");
-        if (getChar() != EOF) {
-          printError(__LINE__, "Unknown expression at the end of file");
-        }
-        break;
-      } else {
-        printError(__LINE__, "Expected an expression. But not found");
-      }
-    } else if (ch == '(') {
+    } else { 
       result = parseExpression(tab+"\t");
       skipSpaces(tab+"\t");
       if (getChar() != EOF) {
         printError(__LINE__, "Unknown expression at the end of file");
       }
       break;
-    } else {
-      printError(__LINE__, "Didnt find a comment or an expression");
     }
     ch = getChar();
   }
@@ -1988,16 +2149,22 @@ static int compile() {
   for (auto &Arg : F->args()) { 
     gArgValues[argCount++] = &Arg;
   }
+<<<<<<< 4e9ef3470ff8b0d728e461ca258d0a9ffc0ad621
 <<<<<<< 87854e54e3a4851736023e27df7daf2cca00502c
 <<<<<<< 9099d0e8b0a32744f9e439760cd09af651c3b1e1
 <<<<<<< b21c32b05863e1fff7581a521a4f782d865e53bf
 <<<<<<< e3a85e8828d8e4f737053287d07d64811bf70813
 =======
+=======
+>>>>>>> Done with coding
   for (int i = 0; i < mutables.size(); i++) {
     mutables[i] = Builder.CreateAlloca(Type::getInt64Ty(C), 0, "Mutable"+std::to_string(i));
     Builder.CreateStore(zero, mutables[i]);
 
   }
+<<<<<<< 4e9ef3470ff8b0d728e461ca258d0a9ffc0ad621
+>>>>>>> Done with coding
+=======
 >>>>>>> Done with coding
 
   Value *RetVal = parser("");
