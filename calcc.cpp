@@ -31,7 +31,6 @@ int  gOffset = 0;
 bool use_select = false;
 
 
-
 Value* parseExpression(string tab);
 void skipSpaces(string tab);
 
