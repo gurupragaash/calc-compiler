@@ -1319,6 +1319,7 @@ Value* parseArgs(string tab) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
 
+<<<<<<< 70026b6870b943be4393e9573984216aaab56fb6
   //Move the pointer next to a
   getnextChar();
   for (i = 0; i < gArgsLen; i++) {
@@ -1338,6 +1339,23 @@ Value* parseArgs(string tab) {
     sprintf(errmsg, "Invalid argument (a%c) used in the program", 
             getChar());
     printError(__LINE__, errmsg);
+=======
+  //Consume a
+  if (accept('a')) {
+    for (i = 0; i < gArgsLen; i++) {
+      if (accept('0' + (i - 0))) { //Change from int to char
+        result = gArgValues[i];
+        break;
+      }  
+    }
+    if (i == gArgsLen) {
+      sprintf(errmsg, "Invalid argument (a%c) used in the program", 
+              getChar());
+      printError(__LINE__, errmsg);
+    }
+  } else {
+    printError(__LINE__);
+>>>>>>> All tests passed
   }
 
   if (debug) {
@@ -1349,20 +1367,24 @@ Value* parseArgs(string tab) {
 
 Value* parseMutables(string tab) {
   char errmsg[50];
-  int i;
+  int i = 0;
   Value *result = NULL;
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
 
-  //Move the pointer next to a
-  getnextChar();
-  for (i = 0; i < mutables.size(); i++) {
-    if (accept('0' + (i - 0))) { //Change from int to char
-      result = mutables[i];
-      break;
-    }  
+  //Consume m
+  if (accept('m')) {
+    for (; i < mutables.size(); i++) {
+      if (accept('0' + (i - 0))) { //Change from int to char
+        result = mutables[i];
+        break;
+      }  
+    }
+  } else {
+    printError(__LINE__, "Expecting a Mutable variable");
   }
+
   if (i == gArgsLen) {
     sprintf(errmsg, "Invalid argument (a%c) used in the program", 
             getChar());
@@ -1381,6 +1403,10 @@ Value* parseArithmeticOperation(char oper, string tab) {
   Value* result = NULL;
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+
+  if (accept(oper) == false) {
+    printError(__LINE__, "Expected an arithmetic operation");
   }
 
   switch (oper) {
@@ -1415,6 +1441,7 @@ Value* parseArithmeticOperation(char oper, string tab) {
 }
 
 Value* parseNegativeNumber(string tab) {
+  bool noNumber = true;
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
@@ -1423,12 +1450,17 @@ Value* parseNegativeNumber(string tab) {
   char ch = getChar();
 
   while  ((ch >= '0') && (ch <= '9')) {
+    noNumber = false;
     num = (num * 10) - (0 + (ch - '0'));
     ch = getnextChar();
     if (oldNum < num) {
       printError(__LINE__, "Given Number wraps over 64 bits. Invalid input");
     }
     oldNum = num;
+  }
+
+  if (noNumber) {
+    printError(__LINE__, "Minus symbol not followed by number");
   }
 
   if (debug) {
@@ -1582,7 +1614,6 @@ Value* parseWhile(string tab) {
 
 Value* parseIf(string tab) {
   Value *result = NULL, *thenValue = NULL, *elseValue = NULL;
-  //Function *TheFunction = Builder.GetInsertBlock()->getParent();
 
   // Create blocks for the then and else cases.  Insert the 'then' block at the
   // end of the function.
@@ -1593,9 +1624,9 @@ Value* parseIf(string tab) {
 
   if (accept('i') && accept('f')) {
     if (use_select == false) {
-      BasicBlock *ThenBB = BasicBlock::Create(C, "then", TheFunction);
-      BasicBlock *ElseBB = BasicBlock::Create(C, "else", TheFunction);
-      BasicBlock *MergeBB = BasicBlock::Create(C, "merge", TheFunction);
+      BasicBlock *ThenBB = BasicBlock::Create(C, "then");
+      BasicBlock *ElseBB = BasicBlock::Create(C, "else");
+      BasicBlock *MergeBB = BasicBlock::Create(C, "merge");
       //Based on the branch go to two block
       Builder.CreateCondBr(parseBoolExpression(tab+"\t"), ThenBB, ElseBB);
 
@@ -2023,8 +2054,7 @@ Value* parseSet(string tab) {
 }
 
 Value* parseExpression(string tab) {
-  char errmsg[75];
-  Value *result;
+  Value *result = NULL;
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
@@ -2043,51 +2073,47 @@ Value* parseExpression(string tab) {
     } else if (ch == 'a') {
       result = parseArgs(tab+"\t");
       break;
+    } else if (ch == 'm') {
+      result = parseMutables(tab+"\t");
+      break;
     } else if ((ch == '\n') || (ch == ' ')){
       skipSpaces(tab+"\t");
       ch = getChar();
-    } else if ((ch == '+') || (ch == '*') || 
-               (ch == '/') || (ch == '%')) {
-      //Negative case is special, handled below
-      getnextChar();
-      result = parseArithmeticOperation(ch, tab+"\t"); 
-      break;
-    } else if (ch == '-') {
-      if (getnextChar() == ' ') {
-        result = parseArithmeticOperation(ch, tab+"\t"); 
-      } else {
-        result = parseNegativeNumber(tab+"\t");
-      }
-      break;
     } else if ((ch >= '0') && (ch <= '9')) {
       result = parsePositiveNumber(tab+"\t");
       break;
+    } else if (ch == '-') {
+      accept('-');
+      result = parseNegativeNumber(tab+"\t");
+      break;
     } else if (ch == '(') {
-      getnextChar();
-      result = parseExpression(tab+"\t");
+      accept('(');
+      skipSpaces(tab+"\t");
+      ch = getChar(); 
+      if ((ch == '+') || (ch == '*') || (ch == '-') ||
+          (ch == '/') || (ch == '%')) {
+        result = parseArithmeticOperation(ch, tab+"\t"); 
+      } else if (ch == 'i') {
+        result = parseIf(tab+"\t");
+      } else if (ch == 's') {
+        if (accept('s') && accept('e'))  {
+          if (accept('q')) {
+            result = parseSeq(tab+"\t");
+          } else if (accept('t')) {
+            result = parseSet(tab+"\t");
+          } else {
+            printError(__LINE__);
+          } 
+        } else {
+          printError(__LINE__);
+        } 
+      } else if (ch == 'w') {
+        result = parseWhile(tab+"\t");
+      }
       skipSpaces(tab+"\t");
       if (accept(')') == false) {
         printError(__LINE__, "Missing Matching paranthesis");
       }
-      break;
-    } else if (ch == 'i') {
-      result = parseIf(tab+"\t");
-      break;
-    } else if (ch == 's') {
-      if (accept('s') && accept('e'))  {
-        if (accept('q')) {
-          result = parseSeq(tab+"\t");
-          break;
-        } else if (accept('t')) {
-          result = parseSet(tab+"\t");
-          break;
-        } 
-      }
-      //If its not a 'seq' or 'set' but starting with 's' or 'se', 
-      //throw error
-      printError(__LINE__);
-    } else if (ch == 'w') {
-      result = parseWhile(tab+"\t");
       break;
     } else {
       printError(__LINE__);
