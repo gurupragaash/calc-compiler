@@ -297,11 +297,13 @@ void printError(int lineno, const char *c) {
 }
 
 void parseComment(string tab) {
+  char ch;
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
   while (getnextChar() != '\n');
   //Skip \n
+<<<<<<< d23052cfec9272773563b8dab7f07400a23983a2
   getnextChar();
   gLineNo++;
   gOffset = 0;
@@ -1304,6 +1306,11 @@ void skipSpaces(string tab) {
     printError(__LINE__, errmsg);
 >>>>>>> parser mostly working
   }
+=======
+  ch = getnextChar();
+  gLineNo++;
+  gOffset = 1;
+>>>>>>> All working
   if (debug) {
     printf("Exit %s\r\n", __PRETTY_FUNCTION__);
   }
@@ -1377,6 +1384,7 @@ Value* parseMutables(string tab) {
   if (accept('m')) {
     for (; i < mutables.size(); i++) {
       if (accept('0' + (i - 0))) { //Change from int to char
+        //result = Builder.CreateLoad(mutables[i]);
         result = mutables[i];
         break;
       }  
@@ -1385,7 +1393,7 @@ Value* parseMutables(string tab) {
     printError(__LINE__, "Expecting a Mutable variable");
   }
 
-  if (i == gArgsLen) {
+  if (i == mutables.size()) {
     sprintf(errmsg, "Invalid argument (a%c) used in the program", 
             getChar());
     printError(__LINE__, errmsg);
@@ -1557,7 +1565,7 @@ Value* parseBoolExpression(string tab) {
              (ch == '!')) {
     result = parseRelationalOperation(tab+"\t"); 
   } else if (ch == ('(')) {
-    getnextChar();
+    accept('(');
     result = parseBoolExpression(tab+"\t");
     if (accept(')') == false) {
       printError(__LINE__, "Missing ) Paranthesis in boolean exp");
@@ -1624,6 +1632,10 @@ Value* parseIf(string tab) {
 
   if (accept('i') && accept('f')) {
     if (use_select == false) {
+      //To add a basic block to a function, 
+      //We can pass the function while creating the block or else use
+      //push_back function over the block list of the function
+      //Here i have used pushback, in while it is while creation
       BasicBlock *ThenBB = BasicBlock::Create(C, "then");
       BasicBlock *ElseBB = BasicBlock::Create(C, "else");
       BasicBlock *MergeBB = BasicBlock::Create(C, "merge");
@@ -1677,14 +1689,25 @@ void skipSpaces(string tab) {
 
   while (getChar() != EOF) {
     if (accept(' ')) {
+      gOffset++;
+      continue;
+    } else if (accept('\t')) {
+      gOffset++;
+      continue;
+    } else if (accept('\r')) {
+      gOffset++;
       continue;
     } else if (accept('\n')) {
       gLineNo++;
+<<<<<<< d23052cfec9272773563b8dab7f07400a23983a2
 <<<<<<< 87854e54e3a4851736023e27df7daf2cca00502c
 >>>>>>> parsing done
 =======
       gOffset = 0;
 >>>>>>> Done. Add comments and make it neat
+=======
+      gOffset = 1;
+>>>>>>> All working
       continue;
     }
     break;
@@ -2045,6 +2068,7 @@ Value* parseSet(string tab) {
   result = parseExpression(tab+"\t");
   skipSpaces(tab+"\t");
   mutableVariable = parseMutables(tab+"\t");
+  //Store values onto the mutable variable
   Builder.CreateStore(result, mutableVariable);
 
   if (debug) {
@@ -2065,8 +2089,9 @@ Value* parseExpression(string tab) {
 
   while (ch != EOF){
     if (ch == '#') {
-      if (gOffset == 0) { 
+      if (gOffset == 1) { 
         parseComment(tab+"\t");
+        ch = getChar();
       } else {
         printError(__LINE__, "Encounter Comment in the middle of a line");
       }
@@ -2074,9 +2099,12 @@ Value* parseExpression(string tab) {
       result = parseArgs(tab+"\t");
       break;
     } else if (ch == 'm') {
-      result = parseMutables(tab+"\t");
+      //Get the mutable variable and do a load operation. The parse mutable
+      //get address of mutable variable. So to get the value 
+      //issue a load operation
+      result = Builder.CreateLoad(parseMutables(tab+"\t"));
       break;
-    } else if ((ch == '\n') || (ch == ' ')){
+    } else if ((ch == '\n') || (ch == ' ') || (ch == '\t')){
       skipSpaces(tab+"\t");
       ch = getChar();
     } else if ((ch >= '0') && (ch <= '9')) {
@@ -2128,22 +2156,27 @@ Value* parseExpression(string tab) {
 
 Value* parser(string tab) {
   Value *result = NULL;
+  char ch;
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
-  char ch = getnextChar();
+  //Read the first char and then call parseExpression
+  getnextChar();
+  result = parseExpression(tab+"\t");
+
+  //Skip the spaces after the expression
+  skipSpaces(tab+"\t");
+
+  //The below ch should be EOF or a comment. Else throw error
+  ch = getChar();
   while(ch != EOF) {
-    if (ch == '#') {
+    if ((ch == '#') && (gOffset == 1)) {
       parseComment(tab+"\t");
-    } else { 
-      result = parseExpression(tab+"\t");
       skipSpaces(tab+"\t");
-      if (getChar() != EOF) {
+      ch = getChar();
+    } else { 
         printError(__LINE__, "Unknown expression at the end of file");
-      }
-      break;
     }
-    ch = getChar();
   }
   if (debug) {
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
