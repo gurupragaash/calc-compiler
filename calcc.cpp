@@ -29,6 +29,7 @@ int  gOffset = 0;
 bool use_select = false;
 
 
+
 Value* parseExpression(string tab);
 void skipSpaces(string tab);
 
@@ -103,14 +104,15 @@ void printError(int lineno, const char *c) {
 }
 
 void parseComment(string tab) {
+  char ch;
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
   while (getnextChar() != '\n');
   //Skip \n
-  getnextChar();
+  ch = getnextChar();
   gLineNo++;
-  gOffset = 0;
+  gOffset = 1;
   if (debug) {
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
@@ -124,18 +126,21 @@ Value* parseArgs(string tab) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
 
-  //Move the pointer next to a
-  getnextChar();
-  for (i = 0; i < gArgsLen; i++) {
-    if (accept('0' + (i - 0))) { //Change from int to char
-      result = gArgValues[i];
-      break;
-    }  
-  }
-  if (i == gArgsLen) {
-    sprintf(errmsg, "Invalid argument (a%c) used in the program", 
-            getChar());
-    printError(__LINE__, errmsg);
+  //Consume a
+  if (accept('a')) {
+    for (i = 0; i < gArgsLen; i++) {
+      if (accept('0' + (i - 0))) { //Change from int to char
+        result = gArgValues[i];
+        break;
+      }  
+    }
+    if (i == gArgsLen) {
+      sprintf(errmsg, "Invalid argument (a%c) used in the program", 
+              getChar());
+      printError(__LINE__, errmsg);
+    }
+  } else {
+    printError(__LINE__);
   }
 
   if (debug) {
@@ -146,21 +151,26 @@ Value* parseArgs(string tab) {
 
 Value* parseMutables(string tab) {
   char errmsg[50];
-  int i;
+  int i = 0;
   Value *result = NULL;
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
 
-  //Move the pointer next to a
-  getnextChar();
-  for (i = 0; i < mutables.size(); i++) {
-    if (accept('0' + (i - 0))) { //Change from int to char
-      result = mutables[i];
-      break;
-    }  
+  //Consume m
+  if (accept('m')) {
+    for (; i < mutables.size(); i++) {
+      if (accept('0' + (i - 0))) { //Change from int to char
+        //result = Builder.CreateLoad(mutables[i]);
+        result = mutables[i];
+        break;
+      }  
+    }
+  } else {
+    printError(__LINE__, "Expecting a Mutable variable");
   }
-  if (i == gArgsLen) {
+
+  if (i == mutables.size()) {
     sprintf(errmsg, "Invalid argument (a%c) used in the program", 
             getChar());
     printError(__LINE__, errmsg);
@@ -178,6 +188,10 @@ Value* parseArithmeticOperation(char oper, string tab) {
   Value* result = NULL;
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+
+  if (accept(oper) == false) {
+    printError(__LINE__, "Expected an arithmetic operation");
   }
 
   switch (oper) {
@@ -212,6 +226,7 @@ Value* parseArithmeticOperation(char oper, string tab) {
 }
 
 Value* parseNegativeNumber(string tab) {
+  bool noNumber = true;
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
@@ -220,12 +235,17 @@ Value* parseNegativeNumber(string tab) {
   char ch = getChar();
 
   while  ((ch >= '0') && (ch <= '9')) {
+    noNumber = false;
     num = (num * 10) - (0 + (ch - '0'));
     ch = getnextChar();
     if (oldNum < num) {
       printError(__LINE__, "Given Number wraps over 64 bits. Invalid input");
     }
     oldNum = num;
+  }
+
+  if (noNumber) {
+    printError(__LINE__, "Minus symbol not followed by number");
   }
 
   if (debug) {
@@ -322,7 +342,7 @@ Value* parseBoolExpression(string tab) {
              (ch == '!')) {
     result = parseRelationalOperation(tab+"\t"); 
   } else if (ch == ('(')) {
-    getnextChar();
+    accept('(');
     result = parseBoolExpression(tab+"\t");
     if (accept(')') == false) {
       printError(__LINE__, "Missing ) Paranthesis in boolean exp");
@@ -379,7 +399,6 @@ Value* parseWhile(string tab) {
 
 Value* parseIf(string tab) {
   Value *result = NULL, *thenValue = NULL, *elseValue = NULL;
-  //Function *TheFunction = Builder.GetInsertBlock()->getParent();
 
   // Create blocks for the then and else cases.  Insert the 'then' block at the
   // end of the function.
@@ -390,9 +409,13 @@ Value* parseIf(string tab) {
 
   if (accept('i') && accept('f')) {
     if (use_select == false) {
-      BasicBlock *ThenBB = BasicBlock::Create(C, "then", TheFunction);
-      BasicBlock *ElseBB = BasicBlock::Create(C, "else", TheFunction);
-      BasicBlock *MergeBB = BasicBlock::Create(C, "merge", TheFunction);
+      //To add a basic block to a function, 
+      //We can pass the function while creating the block or else use
+      //push_back function over the block list of the function
+      //Here i have used pushback, in while it is while creation
+      BasicBlock *ThenBB = BasicBlock::Create(C, "then");
+      BasicBlock *ElseBB = BasicBlock::Create(C, "else");
+      BasicBlock *MergeBB = BasicBlock::Create(C, "merge");
       //Based on the branch go to two block
       Builder.CreateCondBr(parseBoolExpression(tab+"\t"), ThenBB, ElseBB);
 
@@ -443,10 +466,17 @@ void skipSpaces(string tab) {
 
   while (getChar() != EOF) {
     if (accept(' ')) {
+      gOffset++;
+      continue;
+    } else if (accept('\t')) {
+      gOffset++;
+      continue;
+    } else if (accept('\r')) {
+      gOffset++;
       continue;
     } else if (accept('\n')) {
       gLineNo++;
-      gOffset = 0;
+      gOffset = 1;
       continue;
     }
     break;
@@ -482,6 +512,7 @@ Value* parseSet(string tab) {
   result = parseExpression(tab+"\t");
   skipSpaces(tab+"\t");
   mutableVariable = parseMutables(tab+"\t");
+  //Store values onto the mutable variable
   Builder.CreateStore(result, mutableVariable);
 
   if (debug) {
@@ -491,8 +522,7 @@ Value* parseSet(string tab) {
 }
 
 Value* parseExpression(string tab) {
-  char errmsg[75];
-  Value *result;
+  Value *result = NULL;
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
@@ -503,59 +533,59 @@ Value* parseExpression(string tab) {
 
   while (ch != EOF){
     if (ch == '#') {
-      if (gOffset == 0) { 
+      if (gOffset == 1) { 
         parseComment(tab+"\t");
+        ch = getChar();
       } else {
         printError(__LINE__, "Encounter Comment in the middle of a line");
       }
     } else if (ch == 'a') {
       result = parseArgs(tab+"\t");
       break;
-    } else if ((ch == '\n') || (ch == ' ')){
+    } else if (ch == 'm') {
+      //Get the mutable variable and do a load operation. The parse mutable
+      //get address of mutable variable. So to get the value 
+      //issue a load operation
+      result = Builder.CreateLoad(parseMutables(tab+"\t"));
+      break;
+    } else if ((ch == '\n') || (ch == ' ') || (ch == '\t')){
       skipSpaces(tab+"\t");
       ch = getChar();
-    } else if ((ch == '+') || (ch == '*') || 
-               (ch == '/') || (ch == '%')) {
-      //Negative case is special, handled below
-      getnextChar();
-      result = parseArithmeticOperation(ch, tab+"\t"); 
-      break;
-    } else if (ch == '-') {
-      if (getnextChar() == ' ') {
-        result = parseArithmeticOperation(ch, tab+"\t"); 
-      } else {
-        result = parseNegativeNumber(tab+"\t");
-      }
-      break;
     } else if ((ch >= '0') && (ch <= '9')) {
       result = parsePositiveNumber(tab+"\t");
       break;
+    } else if (ch == '-') {
+      accept('-');
+      result = parseNegativeNumber(tab+"\t");
+      break;
     } else if (ch == '(') {
-      getnextChar();
-      result = parseExpression(tab+"\t");
+      accept('(');
+      skipSpaces(tab+"\t");
+      ch = getChar(); 
+      if ((ch == '+') || (ch == '*') || (ch == '-') ||
+          (ch == '/') || (ch == '%')) {
+        result = parseArithmeticOperation(ch, tab+"\t"); 
+      } else if (ch == 'i') {
+        result = parseIf(tab+"\t");
+      } else if (ch == 's') {
+        if (accept('s') && accept('e'))  {
+          if (accept('q')) {
+            result = parseSeq(tab+"\t");
+          } else if (accept('t')) {
+            result = parseSet(tab+"\t");
+          } else {
+            printError(__LINE__);
+          } 
+        } else {
+          printError(__LINE__);
+        } 
+      } else if (ch == 'w') {
+        result = parseWhile(tab+"\t");
+      }
       skipSpaces(tab+"\t");
       if (accept(')') == false) {
         printError(__LINE__, "Missing Matching paranthesis");
       }
-      break;
-    } else if (ch == 'i') {
-      result = parseIf(tab+"\t");
-      break;
-    } else if (ch == 's') {
-      if (accept('s') && accept('e'))  {
-        if (accept('q')) {
-          result = parseSeq(tab+"\t");
-          break;
-        } else if (accept('t')) {
-          result = parseSet(tab+"\t");
-          break;
-        } 
-      }
-      //If its not a 'seq' or 'set' but starting with 's' or 'se', 
-      //throw error
-      printError(__LINE__);
-    } else if (ch == 'w') {
-      result = parseWhile(tab+"\t");
       break;
     } else {
       printError(__LINE__);
@@ -570,22 +600,27 @@ Value* parseExpression(string tab) {
 
 Value* parser(string tab) {
   Value *result = NULL;
+  char ch;
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
-  char ch = getnextChar();
+  //Read the first char and then call parseExpression
+  getnextChar();
+  result = parseExpression(tab+"\t");
+
+  //Skip the spaces after the expression
+  skipSpaces(tab+"\t");
+
+  //The below ch should be EOF or a comment. Else throw error
+  ch = getChar();
   while(ch != EOF) {
-    if (ch == '#') {
+    if ((ch == '#') && (gOffset == 1)) {
       parseComment(tab+"\t");
-    } else { 
-      result = parseExpression(tab+"\t");
       skipSpaces(tab+"\t");
-      if (getChar() != EOF) {
+      ch = getChar();
+    } else { 
         printError(__LINE__, "Unknown expression at the end of file");
-      }
-      break;
     }
-    ch = getChar();
   }
   if (debug) {
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
