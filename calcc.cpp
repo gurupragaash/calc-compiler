@@ -581,6 +581,8 @@ Value* parseExpression(string tab) {
         } 
       } else if (ch == 'w') {
         result = parseWhile(tab+"\t");
+      } else {
+        printError(__LINE__, "Didnt find a valid expression within ()");
       }
       skipSpaces(tab+"\t");
       if (accept(')') == false) {
