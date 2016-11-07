@@ -25,6 +25,8 @@ char gCurValue = -1;
 int  gArgsLen = 6;
 int  gLineNo = 1;
 bool debug = false;
+bool integerOverflow = false;
+int  gLineOffset = 0;
 int  gOffset = 0;
 bool use_select = false;
 
@@ -45,6 +47,7 @@ char getChar() {
 void nextChar(void) {
   if (!cin.eof()) {
     gCurValue = cin.get();
+    gLineOffset++;
     gOffset++;
   } else {
     gCurValue = EOF;
@@ -64,17 +67,6 @@ bool accept(char c) {
   return false;
 }
 
-/*
-bool accept(string c) {
-  int i = 0, len = c.size();
-  bool retVal = true;
-
-  while ((i < len) && retVal) {
-    retVal &= accept(c[i++]);
-  }
-  return retVal;
-}*/
-
 bool check(char c) {
   if (getChar() == c) {
     return true;
@@ -91,14 +83,14 @@ string getContext() {
 void printError(int lineno) {
   printf ("%d:Invalid statement at LineNo:%d:%d - %c%s",
            lineno,
-           gLineNo, gOffset, getChar(), getContext().c_str());
+           gLineNo, gLineOffset, getChar(), getContext().c_str());
   exit(1);
 }
 
 void printError(int lineno, const char *c) {
   printf("%d:Unable to compile due to error \"%s\" at Line: %d Offset:%d \r\n",
       lineno,
-      c, gLineNo, gOffset);
+      c, gLineNo, gLineOffset);
   printf("Remaining Code: %c%s", getChar(), getContext().c_str());
   exit(1);
 }
@@ -112,7 +104,7 @@ void parseComment(string tab) {
   //Skip \n
   ch = getnextChar();
   gLineNo++;
-  gOffset = 1;
+  gLineOffset = 1;
   if (debug) {
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
@@ -182,7 +174,160 @@ Value* parseMutables(string tab) {
   return result;
 }
 
+Function* createDivWithOverFlow(string tab) {
+  std::map<int, Value *> divArgs;
+  Value *didOverflow = NULL, *result = NULL;
+  if (debug) {
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  std::vector<Type *> TwoInts(2, Type::getInt64Ty(C));
+  Type *retTypes[] = {Type::getInt64Ty(C), Type::getInt1Ty(C)};
+  StructType* retType = StructType::get(C, ArrayRef<Type *>(retTypes, 2)); 
 
+  FunctionType *FT = FunctionType::get(retType, TwoInts, false);
+  Function *F = Function::Create(FT, Function::ExternalLinkage,
+                    "sdiv_with_overflow", &*M);
+  BasicBlock *BB = BasicBlock::Create(C, "entry", F);
+  Builder.SetInsertPoint(BB);
+
+  divArgs.clear();
+  int argCount = 0;
+  for (auto &Arg : F->args()) { 
+    divArgs[argCount++] = &Arg;
+  }
+
+  didOverflow = Builder.CreateAnd(
+                        Builder.CreateICmpEQ(divArgs[0], 
+                                ConstantInt::get(Type::getInt64Ty(C), 
+                                                 APInt::getSignedMinValue(64))),
+                        Builder.CreateICmpEQ(divArgs[1],
+                                ConstantInt::get(Type::getInt64Ty(C),
+                                                 APInt(64, -1, true/*isSigned*/))),
+                        "oper1 == IntMIN and oper2 == -1");
+  didOverflow = Builder.CreateOr(didOverflow, 
+                        Builder.CreateICmpEQ(divArgs[1],
+                                ConstantInt::get(Type::getInt64Ty(C), 
+                                                 APInt::getNullValue(64))),
+                        "or oper2 == 0");
+  result = Builder.CreateSDiv(divArgs[0], divArgs[1], "divtmp");
+  Value *res =  ConstantStruct::get(retType, result, didOverflow, NULL);
+  Builder.CreateRet(res);
+  verifyFunction(*F);
+
+  if (debug) {
+    printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  return F;
+}
+
+void createCallToTrap(int pos, string tab) {
+  if (debug) {
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  string fName = "overflow_fail";
+  Function *F = M->getFunction(fName); 
+
+  //Check if the function is already present. Then return, else add
+  if (F == NULL) {
+    std::vector<Type *> OneInt(1, Type::getInt64Ty(C));
+    FunctionType *FT = FunctionType::get(Type::getInt64Ty(C), OneInt, false);
+    F = Function::Create(FT, Function::ExternalLinkage,
+                     fName, &*M);
+  }
+  Value *position[1] = {ConstantInt::get(Type::getInt64Ty(C), pos)}; 
+  Builder.CreateCall(F, ArrayRef<Value *>(position, 1), "calltrap");
+  if (debug) {
+    printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+}
+
+Value* parseArithmeticOperationWithOverflowCheck(char oper, string tab) {
+  int operatorPosition = gOffset;
+  Value* result = NULL, *didOverflow, *oper1, *oper2;
+  Function *overflowCheckOper = NULL;
+  Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  if (debug) {
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+
+  if (accept(oper) == false) {
+    printError(__LINE__, "Expected an arithmetic operation");
+  }
+
+  oper1 = parseExpression(tab+"\t");
+  oper2 = parseExpression(tab+"\t");
+  Value * intrinsic_args[2] = { oper1, oper2};
+  BasicBlock *CurrentBB = Builder.GetInsertBlock();
+
+  switch (oper) {
+    case '+':
+      overflowCheckOper = 
+        Intrinsic::getDeclaration(&*M, Intrinsic::sadd_with_overflow,
+                                  ArrayRef<Type *>(Type::getInt64Ty(C)));
+      break;
+    case '-':
+      overflowCheckOper = 
+        Intrinsic::getDeclaration(&*M, Intrinsic::ssub_with_overflow,
+                                  ArrayRef<Type *>(Type::getInt64Ty(C)));
+      break;
+    case '*':
+      overflowCheckOper = 
+        Intrinsic::getDeclaration(&*M, Intrinsic::smul_with_overflow,
+                                  ArrayRef<Type *>(Type::getInt64Ty(C)));
+      break;
+    case '/':
+      //overflowCheckOper = createDivWithOverFlow(tab+"\t");
+      didOverflow = Builder.CreateAnd(
+                            Builder.CreateICmpEQ(oper1, 
+                                    ConstantInt::get(Type::getInt64Ty(C), 
+                                                     APInt::getSignedMinValue(64))),
+                            Builder.CreateICmpEQ(oper2,
+                                    ConstantInt::get(Type::getInt64Ty(C),
+                                                     APInt(64, -1, true/*isSigned*/))),
+                            "oper1 == IntMIN and oper2 == -1");
+      didOverflow = Builder.CreateOr(didOverflow, 
+                            Builder.CreateICmpEQ(oper2,
+                                    ConstantInt::get(Type::getInt64Ty(C), 
+                                                     APInt::getNullValue(64))),
+                            "or oper2 == 0");
+      result = Builder.CreateSDiv(oper1, oper2, "divtmp");
+ 
+      break;
+    case '%':
+      didOverflow = Builder.CreateICmpEQ(oper2,
+                              ConstantInt::get(Type::getInt64Ty(C), 
+                                             APInt::getNullValue(64)),
+                            "oper2 == 0");
+      result = Builder.CreateSRem(oper1, oper2, "divtmp");
+      break;
+    default:
+      printError(__LINE__, "Fatal error in compiler. Cannot reach here");
+  }
+
+  Builder.SetInsertPoint(CurrentBB);
+  if (overflowCheckOper != NULL) {
+    Value* v = Builder.CreateCall(overflowCheckOper, 
+                                ArrayRef<Value *>(intrinsic_args, 2));
+    result = Builder.CreateExtractValue(v, 0);
+    didOverflow = Builder.CreateExtractValue(v, 1);
+  }
+
+  BasicBlock *ThenBB = BasicBlock::Create(C, "then");
+  BasicBlock *ElseBB = BasicBlock::Create(C, "else");
+
+  Builder.CreateCondBr(didOverflow, ThenBB, ElseBB);
+  TheFunction->getBasicBlockList().push_back(ThenBB);
+  Builder.SetInsertPoint(ThenBB);
+  createCallToTrap(operatorPosition, tab+"\t");
+  Builder.CreateBr(ElseBB);
+  TheFunction->getBasicBlockList().push_back(ElseBB);
+  Builder.SetInsertPoint(ElseBB);
+  if (debug) {
+    printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  return result;
+
+}
 //Guess this should return an LLVM object
 Value* parseArithmeticOperation(char oper, string tab) {
   Value* result = NULL;
@@ -231,14 +376,14 @@ Value* parseNegativeNumber(string tab) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
 
-  long num = 0, oldNum = 0;
+  unsigned long num = 0, oldNum = 0;
   char ch = getChar();
 
   while  ((ch >= '0') && (ch <= '9')) {
     noNumber = false;
     num = (num * 10) - (0 + (ch - '0'));
     ch = getnextChar();
-    if (oldNum < num) {
+    if ((signed long)oldNum < (signed long)num) {
       printError(__LINE__, "Given Number wraps over 64 bits. Invalid input");
     }
     oldNum = num;
@@ -259,13 +404,13 @@ Value* parsePositiveNumber(string tab) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
 
-  long num = 0, oldNum = 0;
+  unsigned long num = 0, oldNum = 0;
   char ch = getChar();
 
   while  ((ch >= '0') && (ch <= '9')) {
     num = (num * 10) + (0 + (ch - '0'));
     ch = getnextChar();
-    if (oldNum > num) {
+    if ((signed long)oldNum > (signed long)num) {
       printError(__LINE__, "Given Number wraps over 64 bits. Invalid input");
     }
     oldNum = num;
@@ -466,17 +611,17 @@ void skipSpaces(string tab) {
 
   while (getChar() != EOF) {
     if (accept(' ')) {
-      gOffset++;
+      gLineOffset++;
       continue;
     } else if (accept('\t')) {
-      gOffset++;
+      gLineOffset++;
       continue;
     } else if (accept('\r')) {
-      gOffset++;
+      gLineOffset++;
       continue;
     } else if (accept('\n')) {
       gLineNo++;
-      gOffset = 1;
+      gLineOffset = 1;
       continue;
     }
     break;
@@ -533,7 +678,7 @@ Value* parseExpression(string tab) {
 
   while (ch != EOF){
     if (ch == '#') {
-      if (gOffset == 1) { 
+      if (gLineOffset == 1) { 
         parseComment(tab+"\t");
         ch = getChar();
       } else {
@@ -564,7 +709,11 @@ Value* parseExpression(string tab) {
       ch = getChar(); 
       if ((ch == '+') || (ch == '*') || (ch == '-') ||
           (ch == '/') || (ch == '%')) {
-        result = parseArithmeticOperation(ch, tab+"\t"); 
+        if (integerOverflow == false) {
+          result = parseArithmeticOperation(ch, tab+"\t"); 
+        } else {
+          result = parseArithmeticOperationWithOverflowCheck(ch, tab+"\t"); 
+        }
       } else if (ch == 'i') {
         result = parseIf(tab+"\t");
       } else if (ch == 's') {
@@ -616,7 +765,7 @@ Value* parser(string tab) {
   //The below ch should be EOF or a comment. Else throw error
   ch = getChar();
   while(ch != EOF) {
-    if ((ch == '#') && (gOffset == 1)) {
+    if ((ch == '#') && (gLineOffset == 1)) {
       parseComment(tab+"\t");
       skipSpaces(tab+"\t");
       ch = getChar();
@@ -659,7 +808,11 @@ static int compile() {
 
 int main(int argc, char **argv) { 
   if (argc > 1) {
+    integerOverflow = true;
+  } 
+  if (argc > 2) {
     debug = true;
+    integerOverflow = true;
   }
   return compile(); 
 }
