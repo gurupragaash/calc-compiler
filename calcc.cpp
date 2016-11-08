@@ -838,7 +838,7 @@ void createCallToTrap(int pos, string tab) {
 }
 
 Value* parseArithmeticOperationWithOverflowCheck(char oper, string tab) {
-  int operatorPosition = gOffset;
+  int operatorPosition = gOffset - 1;
   Value* result = NULL, *didOverflow, *oper1, *oper2;
   Function *overflowCheckOper = NULL;
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
@@ -886,7 +886,6 @@ Value* parseArithmeticOperationWithOverflowCheck(char oper, string tab) {
                                     ConstantInt::get(Type::getInt64Ty(C), 
                                                      APInt::getNullValue(64))),
                             "or oper2 == 0");
-      result = Builder.CreateSDiv(oper1, oper2, "divtmp");
  
       break;
     case '%':
@@ -918,6 +917,12 @@ Value* parseArithmeticOperationWithOverflowCheck(char oper, string tab) {
   Builder.CreateBr(ElseBB);
   TheFunction->getBasicBlockList().push_back(ElseBB);
   Builder.SetInsertPoint(ElseBB);
+  if (oper == '/') {
+    result = Builder.CreateSDiv(oper1, oper2, "divtmp");
+  } else if (oper == '%') {
+    result = Builder.CreateSDiv(oper1, oper2, "divtmp");
+  }
+
   if (debug) {
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
