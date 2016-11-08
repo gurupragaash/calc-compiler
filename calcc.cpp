@@ -872,7 +872,6 @@ Value* parseArithmeticOperationWithOverflowCheck(char oper, string tab) {
                                   ArrayRef<Type *>(Type::getInt64Ty(C)));
       break;
     case '/':
-      //overflowCheckOper = createDivWithOverFlow(tab+"\t");
       didOverflow = Builder.CreateAnd(
                             Builder.CreateICmpEQ(oper1, 
                                     ConstantInt::get(Type::getInt64Ty(C), 
@@ -893,7 +892,6 @@ Value* parseArithmeticOperationWithOverflowCheck(char oper, string tab) {
                               ConstantInt::get(Type::getInt64Ty(C), 
                                              APInt::getNullValue(64)),
                             "oper2 == 0");
-      result = Builder.CreateSRem(oper1, oper2, "divtmp");
       break;
     default:
       printError(__LINE__, "Fatal error in compiler. Cannot reach here");
@@ -920,7 +918,7 @@ Value* parseArithmeticOperationWithOverflowCheck(char oper, string tab) {
   if (oper == '/') {
     result = Builder.CreateSDiv(oper1, oper2, "divtmp");
   } else if (oper == '%') {
-    result = Builder.CreateSDiv(oper1, oper2, "divtmp");
+    result = Builder.CreateSRem(oper1, oper2, "divtmp");
   }
 
   if (debug) {
