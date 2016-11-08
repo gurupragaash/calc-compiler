@@ -288,7 +288,6 @@ Value* parseArithmeticOperationWithOverflowCheck(char oper, string tab) {
                                     ConstantInt::get(Type::getInt64Ty(C), 
                                                      APInt::getNullValue(64))),
                             "or oper2 == 0");
- 
       break;
     case '%':
       didOverflow = Builder.CreateICmpEQ(oper2,
