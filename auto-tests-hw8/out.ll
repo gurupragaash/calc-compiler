@@ -1,51 +1,49 @@
-; ModuleID = 'calc'
-source_filename = "calc"
-target triple = "x86_64-apple-darwin16.0.0"
+target triple = "x86_64-unknown-linux-gnu"
 
 define i64 @f(i64, i64, i64, i64, i64, i64) {
 entry:
-  %6 = alloca i64
-  store i64 0, i64* %6
-  %7 = alloca i64
-  store i64 0, i64* %7
-  %8 = alloca i64
-  store i64 0, i64* %8
-  %9 = alloca i64
-  store i64 0, i64* %9
-  %10 = alloca i64
-  store i64 0, i64* %10
-  %11 = alloca i64
-  store i64 0, i64* %11
-  %12 = alloca i64
-  store i64 0, i64* %12
-  %13 = alloca i64
-  store i64 0, i64* %13
-  %14 = alloca i64
-  store i64 0, i64* %14
-  %15 = alloca i64
-  store i64 0, i64* %15
-  store i64 %0, i64* %6
-  store i64 %1, i64* %7
-  br label %16
+  %Mutable0 = alloca i64
+  store i64 0, i64* %Mutable0
+  %Mutable1 = alloca i64
+  store i64 0, i64* %Mutable1
+  %Mutable2 = alloca i64
+  store i64 0, i64* %Mutable2
+  %Mutable3 = alloca i64
+  store i64 0, i64* %Mutable3
+  %Mutable4 = alloca i64
+  store i64 0, i64* %Mutable4
+  %Mutable5 = alloca i64
+  store i64 0, i64* %Mutable5
+  %Mutable6 = alloca i64
+  store i64 0, i64* %Mutable6
+  %Mutable7 = alloca i64
+  store i64 0, i64* %Mutable7
+  %Mutable8 = alloca i64
+  store i64 0, i64* %Mutable8
+  %Mutable9 = alloca i64
+  store i64 0, i64* %Mutable9
+  store i64 %0, i64* %Mutable0
+  store i64 %1, i64* %Mutable1
+  br label %whileEntry
 
-; <label>:16:                                     ; preds = %22, %entry
-  %17 = phi i64 [ 0, %entry ], [ %27, %22 ]
-  %18 = load i64, i64* %7
-  %19 = icmp ne i64 %18, 0
-  br i1 %19, label %22, label %20
+whileEntry:                                       ; preds = %whileBody, %entry
+  %phiNode = phi i64 [ 0, %entry ], [ %10, %whileBody ]
+  %6 = load i64, i64* %Mutable1
+  %ne = icmp ne i64 %6, 0
+  br i1 %ne, label %whileBody, label %whileExit
 
-; <label>:20:                                     ; preds = %16
-  %21 = load i64, i64* %6
-  ret i64 %21
+whileBody:                                        ; preds = %whileEntry
+  %7 = load i64, i64* %Mutable1
+  store i64 %7, i64* %Mutable2
+  %8 = load i64, i64* %Mutable0
+  %9 = load i64, i64* %Mutable1
+  %modtmp = srem i64 %8, %9
+  store i64 %modtmp, i64* %Mutable1
+  %10 = load i64, i64* %Mutable2
+  store i64 %10, i64* %Mutable0
+  br label %whileEntry
 
-; <label>:22:                                     ; preds = %16
-  %23 = load i64, i64* %7
-  store i64 %23, i64* %8
-  %24 = load i64, i64* %6
-  %25 = load i64, i64* %7
-  %26 = srem i64 %24, %25
-  store i64 %26, i64* %7
-  %27 = load i64, i64* %8
-  store i64 %27, i64* %6
-  br label %16
+whileExit:                                        ; preds = %whileEntry
+  %11 = load i64, i64* %Mutable0
+  ret i64 %11
 }
