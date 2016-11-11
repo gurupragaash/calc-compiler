@@ -20,7 +20,7 @@ static IRBuilder<NoFolder> Builder(C);
 static std::unique_ptr<Module> M = llvm::make_unique<Module>("", C);
 static std::map<int, Value *> gArgValues;
 static vector<Value*> mutables(10);
-static Value *zero = ConstantInt::get(C, APInt(64, 0));
+static Value *zero = ConstantInt::get(C, APInt::getNullValue(64));
 char gCurValue = -1;
 int  gArgsLen = 6;
 int  gLineNo = 1;
@@ -29,6 +29,7 @@ bool integerOverflow = false;
 int  gLineOffset = 0;
 int  gOffset = 0;
 bool use_select = false;
+string trapFunction = "overflow_fail";
 
 
 Value* parseExpression(string tab);
@@ -173,9 +174,12 @@ Value* parseMutables(string tab) {
   return result;
 }
 
-Function* createDivWithOverFlow(string tab) {
-  std::map<int, Value *> divArgs;
+Function* createRemWithOverFlow(string tab) {
+  std::map<int, Value *> remArgs;
   Value *didOverflow = NULL, *result = NULL;
+  Function *F = NULL;
+  string fname = "srem_with_overflow";
+
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
@@ -183,9 +187,79 @@ Function* createDivWithOverFlow(string tab) {
   Type *retTypes[] = {Type::getInt64Ty(C), Type::getInt1Ty(C)};
   StructType* retType = StructType::get(C, ArrayRef<Type *>(retTypes, 2)); 
 
-  FunctionType *FT = FunctionType::get(retType, TwoInts, false);
-  Function *F = Function::Create(FT, Function::ExternalLinkage,
-                    "sdiv_with_overflow", &*M);
+  F = M->getFunction(fname); 
+  if (F == NULL) {
+    //Create this function if its not present in the module.
+    FunctionType *FT = FunctionType::get(retType, TwoInts, false);
+    F = Function::Create(FT, Function::InternalLinkage,
+                                   fname, &*M);
+  } else {
+    //Function already exits, just return the function pointer
+    return F;
+  }
+
+  BasicBlock *BB = BasicBlock::Create(C, "entry", F);
+  Builder.SetInsertPoint(BB);
+
+  remArgs.clear();
+  int argCount = 0;
+  for (auto &Arg : F->args()) { 
+    remArgs[argCount++] = &Arg;
+  }
+
+  didOverflow = Builder.CreateICmpEQ(remArgs[1], zero, "oper2 == 0");
+
+  BasicBlock *ThenBB = BasicBlock::Create(C, "then");
+  BasicBlock *ElseBB = BasicBlock::Create(C, "else");
+
+  UndefValue *undef = UndefValue::get(retType);
+  Value *res;
+
+  Builder.CreateCondBr(didOverflow, ThenBB, ElseBB);
+  F->getBasicBlockList().push_back(ThenBB);
+  Builder.SetInsertPoint(ThenBB);
+    result = zero; 
+    res = Builder.CreateInsertValue(undef, result, 0);
+    res = Builder.CreateInsertValue(res, didOverflow, 1);
+    Builder.CreateRet(res);
+  F->getBasicBlockList().push_back(ElseBB);
+  Builder.SetInsertPoint(ElseBB);
+    result = Builder.CreateSRem(remArgs[0], remArgs[1], "remtmp");
+    res = Builder.CreateInsertValue(undef, result, 0);
+    res = Builder.CreateInsertValue(res, didOverflow, 1);
+    Builder.CreateRet(res);
+
+  if (debug) {
+    printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  return F;
+
+}
+
+Function* createDivWithOverFlow(string tab) {
+  std::map<int, Value *> divArgs;
+  Value *didOverflow = NULL, *result = NULL;
+  Function *F = NULL;
+  string fname = "sdiv_with_overflow";
+
+  if (debug) {
+    printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
+  }
+  std::vector<Type *> TwoInts(2, Type::getInt64Ty(C));
+  Type *retTypes[] = {Type::getInt64Ty(C), Type::getInt1Ty(C)};
+  StructType* retType = StructType::get(C, ArrayRef<Type *>(retTypes, 2)); 
+
+  F = M->getFunction(fname); 
+  if (F == NULL) {
+    //Create this function if its not present in the module.
+    FunctionType *FT = FunctionType::get(retType, TwoInts, false);
+    F = Function::Create(FT, Function::InternalLinkage,
+                                   fname, &*M);
+  } else {
+    //Function already exits, just return the function pointer
+    return F;
+  }
+
   BasicBlock *BB = BasicBlock::Create(C, "entry", F);
   Builder.SetInsertPoint(BB);
 
@@ -202,16 +276,30 @@ Function* createDivWithOverFlow(string tab) {
                         Builder.CreateICmpEQ(divArgs[1],
                                 ConstantInt::get(Type::getInt64Ty(C),
                                                  APInt(64, -1, true/*isSigned*/))),
-                        "oper1 == IntMIN and oper2 == -1");
+                        "oper1 == INT_MIN and oper2 == -1");
   didOverflow = Builder.CreateOr(didOverflow, 
-                        Builder.CreateICmpEQ(divArgs[1],
-                                ConstantInt::get(Type::getInt64Ty(C), 
-                                                 APInt::getNullValue(64))),
+                        Builder.CreateICmpEQ(divArgs[1], zero),
                         "or oper2 == 0");
-  result = Builder.CreateSDiv(divArgs[0], divArgs[1], "divtmp");
-  Value *res =  ConstantStruct::get(retType, result, didOverflow, NULL);
-  Builder.CreateRet(res);
-  verifyFunction(*F);
+
+  BasicBlock *ThenBB = BasicBlock::Create(C, "then");
+  BasicBlock *ElseBB = BasicBlock::Create(C, "else");
+
+  UndefValue *undef = UndefValue::get(retType);
+  Value *res;
+
+  Builder.CreateCondBr(didOverflow, ThenBB, ElseBB);
+  F->getBasicBlockList().push_back(ThenBB);
+  Builder.SetInsertPoint(ThenBB);
+    result = zero; 
+    res = Builder.CreateInsertValue(undef, result, 0);
+    res = Builder.CreateInsertValue(res, didOverflow, 1);
+    Builder.CreateRet(res);
+  F->getBasicBlockList().push_back(ElseBB);
+  Builder.SetInsertPoint(ElseBB);
+    result = Builder.CreateSDiv(divArgs[0], divArgs[1], "divtmp");
+    res = Builder.CreateInsertValue(undef, result, 0);
+    res = Builder.CreateInsertValue(res, didOverflow, 1);
+    Builder.CreateRet(res);
 
   if (debug) {
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
@@ -223,15 +311,14 @@ void createCallToTrap(int pos, string tab) {
   if (debug) {
     printf("%sEnter %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
   }
-  string fName = "overflow_fail";
-  Function *F = M->getFunction(fName); 
+  Function *F = M->getFunction(trapFunction); 
 
   //Check if the function is already present. Then return, else add
   if (F == NULL) {
     std::vector<Type *> OneInt(1, Type::getInt64Ty(C));
     FunctionType *FT = FunctionType::get(Type::getInt64Ty(C), OneInt, false);
     F = Function::Create(FT, Function::ExternalLinkage,
-                     fName, &*M);
+                     trapFunction, &*M);
   }
   Value *position[1] = {ConstantInt::get(Type::getInt64Ty(C), pos)}; 
   Builder.CreateCall(F, ArrayRef<Value *>(position, 1), "calltrap");
@@ -275,6 +362,8 @@ Value* parseArithmeticOperationWithOverflowCheck(char oper, string tab) {
                                   ArrayRef<Type *>(Type::getInt64Ty(C)));
       break;
     case '/':
+      overflowCheckOper = createDivWithOverFlow(tab+"\t"); 
+#if 0
       didOverflow = Builder.CreateAnd(
                             Builder.CreateICmpEQ(oper1, 
                                     ConstantInt::get(Type::getInt64Ty(C), 
@@ -282,30 +371,32 @@ Value* parseArithmeticOperationWithOverflowCheck(char oper, string tab) {
                             Builder.CreateICmpEQ(oper2,
                                     ConstantInt::get(Type::getInt64Ty(C),
                                                      APInt(64, -1, true/*isSigned*/))),
-                            "oper1 == IntMIN and oper2 == -1");
+                            "oper1 == INT_MIN and oper2 == -1");
       didOverflow = Builder.CreateOr(didOverflow, 
                             Builder.CreateICmpEQ(oper2,
                                     ConstantInt::get(Type::getInt64Ty(C), 
                                                      APInt::getNullValue(64))),
                             "or oper2 == 0");
+#endif
       break;
     case '%':
+      overflowCheckOper = createRemWithOverFlow(tab+"\t"); 
+#if 0
       didOverflow = Builder.CreateICmpEQ(oper2,
                               ConstantInt::get(Type::getInt64Ty(C), 
                                              APInt::getNullValue(64)),
                             "oper2 == 0");
+#endif
       break;
     default:
       printError(__LINE__, "Fatal error in compiler. Cannot reach here");
   }
 
   Builder.SetInsertPoint(CurrentBB);
-  if (overflowCheckOper != NULL) {
-    Value* v = Builder.CreateCall(overflowCheckOper, 
-                                ArrayRef<Value *>(intrinsic_args, 2));
-    result = Builder.CreateExtractValue(v, 0);
-    didOverflow = Builder.CreateExtractValue(v, 1);
-  }
+  Value* ret = Builder.CreateCall(overflowCheckOper, 
+                              ArrayRef<Value *>(intrinsic_args, 2));
+  result = Builder.CreateExtractValue(ret, 0);
+  didOverflow = Builder.CreateExtractValue(ret, 1);
 
   BasicBlock *ThenBB = BasicBlock::Create(C, "then");
   BasicBlock *ElseBB = BasicBlock::Create(C, "else");
@@ -317,11 +408,6 @@ Value* parseArithmeticOperationWithOverflowCheck(char oper, string tab) {
   Builder.CreateBr(ElseBB);
   TheFunction->getBasicBlockList().push_back(ElseBB);
   Builder.SetInsertPoint(ElseBB);
-  if (oper == '/') {
-    result = Builder.CreateSDiv(oper1, oper2, "divtmp");
-  } else if (oper == '%') {
-    result = Builder.CreateSRem(oper1, oper2, "divtmp");
-  }
 
   if (debug) {
     printf("%sExit %s\r\n", tab.c_str(), __PRETTY_FUNCTION__);
@@ -329,7 +415,7 @@ Value* parseArithmeticOperationWithOverflowCheck(char oper, string tab) {
   return result;
 
 }
-//Guess this should return an LLVM object
+
 Value* parseArithmeticOperation(char oper, string tab) {
   Value* result = NULL;
   if (debug) {
