@@ -1,4 +1,5 @@
-# Analysis of LLVM's optimizer over avg.calc 
+# Analysis of LLVM's optimizer
+Consider a below program written in [calc language](https://utah.instructure.com/courses/377698/assignments/3420338 "Calc Language Grammer"). I have a [parser](https://github.com/gurupragaash/calc-compiler/blob/master/calcc.cpp "Calc Parser") which parses this program and converts it to a [LLVM IR](http://llvm.org/docs/LangRef.html "LLVM Language Ref"). We then run LLVM optimizer(`opt -O2 -print-after-all <llvm ir>`) over the IR, which runs the optimizer over the IR and prints the IR after each optimization. We then look into the optimization passes which make changes to the IR, find what changes are done and analyse how they were done.
 ```llvm
 # ARGS 3 4 8 12
 # RESULT 8
